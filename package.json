@@ -1,0 +1,22 @@
+{
+  "name": "f1-pitwall",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "F1 PITWALL - F1 통합 정보 웹사이트 (웹프로그래밍 텀프로젝트)",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --watch server/index.js",
+    "start": "node server/index.js",
+    "gate": "node scripts/gate.js",
+    "collect": "node scripts/ingest.js",
+    "db:schema": "node scripts/db-schema.js"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
+  }
+}
