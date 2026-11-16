@@ -261,10 +261,11 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 - [x] 순위·격차·변동 계산 + 캐시, 정보 계열 API(`/api/seasons`·`races`·`races/next`·`races/:id/results`·`standings/*`·`summary`) — 순위는 `result`(R+S 포인트)를 합산해 계산(동률: 포인트→우승→이름), 직전 라운드 대비 변동·리더 격차·라운드별 누적 `history`(차트용) 포함. 메모리 `Map`+TTL(60초) 캐시. 프로필·`highlights`·`news`·`search`는 2주차 (11.16)
 - [x] 공통 모듈(`client/js/`: `api`·`dom`·`ui`·`layout`·`format`·`teams`, `client/css/`: 토큰·기본 스타일) — API 클라이언트, 헤더·시즌 선택기·라이트/다크 테마, 카드·표·탭·스켈레톤·오류·빈 상태. 팀 컬러는 `team.color`가 채워지기 전까지 `teams.js`의 임시 색 (11.16)
 - [x] 대시보드(히어로 캐러셀·직전 포디움·요약 카드 3개·순위 Top 5) + 일정·결과·순위 페이지 + 누적 포인트 선 차트(SVG, `chart-line.js`). 사진 자리는 그라디언트 플레이스홀더, 시안 미확인 부분은 `DESIGN.md` 기본값으로 구현 → 피드백 반영 대기 (11.16)
-- [ ] GitHub 초기 커밋, Render 배포·콜드 스타트 확인 — `render.yaml`(Blueprint, Singapore 리전, `DATABASE_URL`은 대시보드에서 직접 입력·6543 주소) 작성 완료. Vercel은 SSE·주기 job·메모리 캐시가 서버리스와 맞지 않아 Render 유지로 결정 (11.16)
+- [x] GitHub 초기 커밋·push, Render 배포(https://f1-pitwall-3tdu.onrender.com — 모든 API·화면 200, 응답 0.5~1.2초 확인 11.16). **콜드 스타트(15분 유휴 후) 시간은 시연 전 재측정** — `render.yaml`(Blueprint, Singapore 리전, `DATABASE_URL`은 대시보드에서 직접 입력·6543 주소) 작성 완료. Vercel은 SSE·주기 job·메모리 캐시가 서버리스와 맞지 않아 Render 유지로 결정 (11.16)
 
 ### 2주차 (11.23~11.29) — 2등급 + 수집 파이프라인
-- [ ] **공통 차트 모듈**(선·막대·박스플롯·점 스트립·도넛·히트맵·버블, §7-1) — 아래 분석 화면보다 먼저
+- [x] 팀 컬러 — `npm run collect:colors`(OpenF1 `team_colour` → `team.color`, 11팀). 화면은 DB 값 우선, 없으면 `teams.js` 예비 색 (11.16)
+- [x] **공통 차트 모듈**(선·막대·박스플롯·점 스트립·도넛·히트맵·버블, §7-1) — `client/js/charts/`(`core.js` 눈금·스케일·툴팁 공유 + 6종)와 선 차트(`chart-line.js`). 샘플 데이터 미리보기: `/dev/charts.html` (11.16)
 - [ ] 드라이버·팀·서킷 프로필, Driver Stats, 일관성, 헤드투헤드(승수), 하이라이트 규칙 + 피드
 - [ ] 뉴스(RSS)·통합 검색
 - [ ] `ingest` 확장: Jolpica **예선 시간·스프린트·랩·피트스톱**을 시즌 전체 적재(1~2시간 분할, 이어받기)

@@ -152,7 +152,7 @@ tbody tr:hover { background: var(--surface-2); }
 .chart { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; position: relative; }
 .chart svg { width: 100%; height: auto; display: block; }
 .chart .grid-line { stroke: var(--border); stroke-width: 1; }
-.chart .axis-label { fill: var(--muted); font-size: 11px; }
+.chart .axis-label { fill: var(--muted); font-size: 13px; } /* viewBox 단위라 화면이 좁아지면 비율로 함께 줄어든다 */
 .chart .line { fill: none; stroke-width: 2.2; stroke-linejoin: round; }
 .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .legend button { display: flex; align-items: center; gap: 6px; background: none; color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font: 12px var(--font); cursor: pointer; }
