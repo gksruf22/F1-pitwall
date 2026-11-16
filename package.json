@@ -12,7 +12,8 @@
     "start": "node server/index.js",
     "gate": "node scripts/gate.js",
     "collect": "node scripts/ingest.js",
-    "db:schema": "node scripts/db-schema.js"
+    "db:schema": "node scripts/db-schema.js",
+    "collect:colors": "node scripts/team-colors.js"
   },
   "dependencies": {
     "dotenv": "^18.0.10",
