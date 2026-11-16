@@ -5,6 +5,9 @@ import { api, urlParam, setUrlParams } from './api.js';
 const NAV = [
   { key: 'home', href: '/', label: '대시보드' },
   { key: 'schedule', href: '/schedule.html', label: '일정·결과·순위' },
+  { key: 'profiles', href: '/drivers.html', label: '드라이버·팀·서킷' },
+  { key: 'analysis', href: '/consistency.html', label: '분석' },
+  { key: 'news', href: '/news.html', label: '뉴스' },
 ];
 
 function themeButton() {
@@ -31,6 +34,12 @@ function seasonSelect() {
   return sel;
 }
 
+// 통합 검색: 입력하고 Enter → /search.html?q=
+function searchBox() {
+  const input = h('input', { class: 'search', type: 'search', name: 'q', placeholder: '검색', 'aria-label': '통합 검색', minlength: 2, maxlength: 50, value: location.pathname === '/search.html' ? (urlParam('q') ?? '') : '' });
+  return h('form', { action: '/search.html', role: 'search' }, input);
+}
+
 export function mountLayout(active) {
   const header = document.getElementById('app-header');
   header.className = 'site-header';
@@ -38,7 +47,7 @@ export function mountLayout(active) {
     h('a', { class: 'logo', href: '/' }, 'F1 ', h('b', null, 'PITWALL')),
     h('nav', { class: 'nav', 'aria-label': '주 메뉴' }, NAV.map((n) =>
       h('a', { href: n.href, 'aria-current': n.key === active ? 'page' : null }, n.label))),
-    h('div', { class: 'tools' }, seasonSelect(), themeButton()));
+    h('div', { class: 'tools' }, searchBox(), seasonSelect(), themeButton()));
 
   const footer = document.getElementById('app-footer');
   footer.className = 'site-footer';
@@ -55,5 +64,26 @@ export function sectionTabs(active) {
     ['schedule', '/schedule.html', '일정'],
     ['results', '/results.html', '결과'],
     ['standings', '/standings.html', '순위'],
+  ].map(([key, href, label]) => h('a', { href: href + q, 'aria-current': key === active ? 'page' : null }, label)));
+}
+
+// 드라이버·팀·서킷 페이지 공통 탭
+export function profileTabs(active) {
+  const season = urlParam('season');
+  const q = season ? `?season=${encodeURIComponent(season)}` : '';
+  return h('nav', { class: 'tabs', 'aria-label': '드라이버·팀·서킷' }, [
+    ['drivers', '/drivers.html', '드라이버'],
+    ['teams', '/teams.html', '팀'],
+    ['circuits', '/circuits.html', '서킷'],
+  ].map(([key, href, label]) => h('a', { href: href + q, 'aria-current': key === active ? 'page' : null }, label)));
+}
+
+// 분석 페이지 공통 탭 (일관성 · 드라이버 비교)
+export function analysisTabs(active) {
+  const season = urlParam('season');
+  const q = season ? `?season=${encodeURIComponent(season)}` : '';
+  return h('nav', { class: 'tabs', 'aria-label': '분석' }, [
+    ['consistency', '/consistency.html', '일관성'],
+    ['h2h', '/h2h.html', '드라이버 비교'],
   ].map(([key, href, label]) => h('a', { href: href + q, 'aria-current': key === active ? 'page' : null }, label)));
 }

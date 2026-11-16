@@ -5,6 +5,8 @@ import { mountLayout } from '../layout.js';
 import { load, table, colorBar, change, skeleton } from '../ui.js';
 import { teamColor } from '../teams.js';
 import { kstDate, kstTime, parts, points } from '../format.js';
+import { newsItem } from '../news-item.js';
+import { mount } from '../dom.js';
 
 mountLayout('home');
 const app = document.getElementById('app');
@@ -99,13 +101,15 @@ load(root, async () => {
       slideLeader('컨스트럭터 챔피언십 1위', c.constructorLeader, (e) => `우승 ${e.wins}회`),
     ]),
     podium(lastRace, summary.season),
-    h('div', { class: 'grid cols-3' },
+    h('div', { class: 'grid cols-4' },
       statCard('시즌 진행률', `${progress.done}/${progress.total}`, `${pct}% 완료`,
         h('div', { class: 'progress' }, h('i', { style: `width:${pct}%` }))),
       statCard('드라이버 1·2위 격차', c.driverGap == null ? '–' : `${points(c.driverGap)}점`,
         c.driverLeader ? `${c.driverLeader.name} 선두` : ''),
       statCard('컨스트럭터 1·2위 격차', c.constructorGap == null ? '–' : `${points(c.constructorGap)}점`,
-        c.constructorLeader ? `${c.constructorLeader.name} 선두` : '')),
+        c.constructorLeader ? `${c.constructorLeader.name} 선두` : ''),
+      statCard('최단 피트스톱', summary.fastestPit ? `${(summary.fastestPit.laneMs / 1000).toFixed(3)}초` : '–',
+        summary.fastestPit ? `${summary.fastestPit.code} · R${summary.fastestPit.round} ${summary.fastestPit.raceName} (피트레인 통과 시간)` : '피트스톱 데이터 없음')),
     h('section', null,
       h('div', { class: 'section-title' }, h('h2', null, '드라이버 순위 Top 5'), h('a', { href: '/standings.html' }, '전체 순위 →')),
       table([
@@ -115,5 +119,32 @@ load(root, async () => {
         { label: '포인트', align: 'right', render: (r) => h('b', null, points(r.points)) },
         { label: '변동', align: 'right', render: (r) => change(r.change) },
       ], topDrivers)),
+    highlightsSection(summary.season),
+    newsSection(),
   ];
 }, skeleton(4, 120));
+
+// ---- 하이라이트 피드(규칙 기반 사실) + 필터 칩 ----
+const FILTERS = [['all', '전체'], ['race', '레이스'], ['driver', '드라이버'], ['team', '팀']];
+
+function highlightsSection(season) {
+  const list = h('div');
+  const chips = h('div', { class: 'chips', role: 'group', 'aria-label': '하이라이트 필터' });
+  const draw = (filter) => {
+    [...chips.children].forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === filter)));
+    load(list, () => api('/highlights', { season, filter, limit: 8 }), ({ items }) => items.length
+      ? h('ul', { class: 'feed' }, items.map((i) => h('li', null, h('span', { class: 'rnd num' }, `R${i.round}`),
+        h('a', { href: `/results.html?race=${i.raceId}&season=${season}` }, i.text))))
+      : h('div', { class: 'state' }, h('p', null, '해당하는 하이라이트가 없습니다.')), skeleton(3, 44));
+  };
+  chips.append(...FILTERS.map(([f, label]) => h('button', { class: 'chip', 'data-f': f, 'aria-pressed': 'false', onclick: () => draw(f) }, label)));
+  draw('all');
+  return h('section', null, h('div', { class: 'section-title' }, h('h2', null, '하이라이트')), chips, list);
+}
+
+function newsSection() {
+  const list = h('div');
+  load(list, () => api('/news', { limit: 5 }), ({ items }) => items.length
+    ? h('ul', { class: 'feed' }, items.map(newsItem)) : h('div', { class: 'state' }, h('p', null, '저장된 뉴스가 없습니다.')), skeleton(3, 44));
+  return h('section', null, h('div', { class: 'section-title' }, h('h2', null, '뉴스'), h('a', { href: '/news.html' }, '더 보기 →')), list);
+}

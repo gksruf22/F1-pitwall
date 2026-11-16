@@ -32,6 +32,13 @@ router.get('/', async (req, res) => {
         WHERE r.position <= 3 ORDER BY r.position`,
       [season, drivers.round],
     );
+    // 최단 피트스톱: Jolpica는 피트레인 통과 시간이다(정지 시간 아님). 기준을 화면에 함께 표기한다.
+    const { rows: pit } = await query(
+      `SELECT p.lane_ms AS "laneMs", p.lap, d.code, d.name AS "driverName", ra.name AS "raceName", ra.round
+         FROM pit_stop p JOIN session s ON s.id = p.session_id JOIN race ra ON ra.id = s.race_id JOIN driver d ON d.id = p.driver_id
+        WHERE ra.season = $1 AND p.lane_ms IS NOT NULL ORDER BY p.lane_ms LIMIT 1`,
+      [season],
+    );
     const gap = (list) => (list.length > 1 ? list[0].points - list[1].points : null);
     return {
       season,
@@ -44,6 +51,7 @@ router.get('/', async (req, res) => {
         constructorGap: gap(constructors.standings),
       },
       topDrivers: drivers.standings.slice(0, 5),
+      fastestPit: pit[0] ?? null,
     };
   });
   res.json(data);

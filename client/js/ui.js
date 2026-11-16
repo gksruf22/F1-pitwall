@@ -17,7 +17,7 @@ export async function load(container, task, render, skel = skeleton()) {
   mount(container, skel);
   try {
     const data = await task();
-    mount(container, ...[].concat(render(data)));
+    mount(container, ...[].concat(render(data)).filter(Boolean));
   } catch (err) {
     mount(container, errorState(err.message, () => load(container, task, render, skel)));
   }

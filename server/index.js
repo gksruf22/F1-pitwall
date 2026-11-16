@@ -7,6 +7,12 @@ import health from './routes/health.js';
 import races from './routes/races.js';
 import standings from './routes/standings.js';
 import summary from './routes/summary.js';
+import profiles from './routes/profiles.js';
+import analysis from './routes/analysis.js';
+import news from './routes/news.js';
+import search from './routes/search.js';
+import highlights from './routes/highlights.js';
+import { scheduleNews } from './services/news.js';
 
 const app = express();
 const clientDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../client');
@@ -16,6 +22,11 @@ app.use('/api/health', health);
 app.use('/api/standings', standings);
 app.use('/api/summary', summary);
 app.use('/api', races); // /seasons, /races ...
+app.use('/api/analysis', analysis);
+app.use('/api/news', news);
+app.use('/api/search', search);
+app.use('/api/highlights', highlights);
+app.use('/api', profiles); // /drivers, /teams, /circuits
 
 // 존재하지 않는 API 경로는 일관된 오류 형식으로 응답한다.
 app.use('/api', (req, res) => {
@@ -32,4 +43,7 @@ app.use((err, req, res, next) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`F1 PITWALL 서버: http://localhost:${port}`));
+app.listen(port, () => {
+  console.log(`F1 PITWALL 서버: http://localhost:${port}`);
+  scheduleNews(); // 뉴스 RSS: 시작 시 + 하루 1회
+});
