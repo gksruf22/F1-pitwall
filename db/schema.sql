@@ -74,3 +74,57 @@ CREATE TABLE IF NOT EXISTS result (
 
 CREATE INDEX IF NOT EXISTS result_driver_idx ON result (driver_id);
 CREATE INDEX IF NOT EXISTS race_season_idx   ON race (season);
+
+-- 2주차: 랩·피트스톱·스틴트·이벤트·뉴스 (PLAN.md §4)
+CREATE TABLE IF NOT EXISTS lap (
+  session_id integer NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+  driver_id  text    NOT NULL REFERENCES driver(id),
+  lap        integer NOT NULL,
+  time_ms    integer,                   -- Jolpica(시즌 전체)
+  position   integer,                   -- Jolpica(해당 랩 종료 시 순위)
+  s1         integer,                   -- 아래 4개는 OpenF1(수집 3건만)
+  s2         integer,
+  s3         integer,
+  st_speed   integer,
+  pit_out    boolean,
+  PRIMARY KEY (session_id, driver_id, lap)
+);
+
+CREATE TABLE IF NOT EXISTS pit_stop (
+  session_id integer NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+  driver_id  text    NOT NULL REFERENCES driver(id),
+  lap        integer NOT NULL,
+  lane_ms    integer,                   -- Jolpica: 피트레인 통과 시간(전체)
+  stop_ms    integer,                   -- OpenF1: 정지 시간(수집 3건만)
+  PRIMARY KEY (session_id, driver_id, lap)
+);
+
+CREATE TABLE IF NOT EXISTS stint (
+  session_id integer NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+  driver_id  text    NOT NULL REFERENCES driver(id),
+  no         integer NOT NULL,
+  lap_from   integer,
+  lap_to     integer,
+  compound   text,
+  PRIMARY KEY (session_id, driver_id, no)
+);
+
+CREATE TABLE IF NOT EXISTS replay_event (
+  session_id integer NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+  seq        integer NOT NULL,
+  ts         timestamptz,
+  lap        integer,
+  type       text NOT NULL,             -- GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSITION_CHANGE
+  driver     text,
+  data       jsonb,
+  PRIMARY KEY (session_id, seq)
+);
+
+CREATE TABLE IF NOT EXISTS news (
+  id            integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  source        text NOT NULL,
+  title         text NOT NULL,
+  url           text NOT NULL UNIQUE,
+  published_utc timestamptz
+);
+CREATE INDEX IF NOT EXISTS news_published_idx ON news (published_utc DESC);

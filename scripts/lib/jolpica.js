@@ -36,8 +36,8 @@ async function fetchJson(url, tries = 4) {
  * - 이미 저장돼 있으면 호출하지 않는다(이어받기). refresh면 무시한다.
  * - 아직 결과가 없는 응답(Races 빈 배열)은 저장하지 않는다 → 나중에 다시 받는다.
  */
-export async function getJolpica(route, { refresh = false } = {}) {
-  const file = path.join(CACHE_DIR, `${route.replace(/\//g, '_')}.json`);
+export async function getJolpica(route, { refresh = false, offset = 0 } = {}) {
+  const file = path.join(CACHE_DIR, `${route.replace(/\//g, '_')}${offset ? `_off${offset}` : ''}.json`);
   if (!refresh) {
     try {
       return JSON.parse(await readFile(file, 'utf8'));
@@ -45,7 +45,7 @@ export async function getJolpica(route, { refresh = false } = {}) {
       /* 캐시 없음 */
     }
   }
-  const data = (await fetchJson(`${BASE}/${route}.json?limit=100`)).MRData;
+  const data = (await fetchJson(`${BASE}/${route}.json?limit=100${offset ? `&offset=${offset}` : ''}`)).MRData;
   const hasData = (data.RaceTable?.Races?.length ?? 0) > 0;
   if (hasData) {
     await mkdir(CACHE_DIR, { recursive: true });
@@ -59,4 +59,25 @@ export function toMs(time) {
   if (!time) return null;
   const m = /^(?:(\d+):)?(\d+)\.(\d{3})$/.exec(time);
   return m ? Number(m[1] ?? 0) * 60000 + Number(m[2]) * 1000 + Number(m[3]) : null;
+}
+
+/**
+ * 100행씩 나뉜 응답(랩 등)을 끝까지 받아 한 레이스 객체로 합친다. 페이지마다 캐시되므로 중단 후 이어받을 수 있다.
+ * listKey: 'Laps' | 'PitStops'. 결과가 아직 없으면 null.
+ */
+export async function getJolpicaAll(route, listKey, opt = {}) {
+  let race = null;
+  for (let offset = 0; ; offset += 100) {
+    const data = await getJolpica(route, { ...opt, offset });
+    const page = data.RaceTable?.Races?.[0];
+    if (!page) return race;
+    race ??= { ...page, [listKey]: [] };
+    // 랩은 페이지 경계에서 같은 랩 번호가 둘로 쪼개져 올 수 있어 번호로 합친다.
+    for (const item of page[listKey]) {
+      const same = listKey === 'Laps' ? race.Laps.find((l) => l.number === item.number) : null;
+      if (same) same.Timings.push(...item.Timings);
+      else race[listKey].push(item);
+    }
+    if (offset + 100 >= Number(data.total)) return race;
+  }
 }
