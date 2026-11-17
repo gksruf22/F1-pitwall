@@ -291,7 +291,8 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 - [ ] 세부 규칙(§8-1) 구현: 채점·알림 job·하이라이트·AI 한도
 - [ ] AI(Tool Use, 근거 표시, 사용량 제한) + `/ai` + 하이라이트 문장 다듬기 + 라이브 AI 질문 박스
 - [x] **로그인(11.17)** — 의존성 없이 Node 내장 `crypto`로 구현(비밀번호 scrypt 해시, JWT HS256 7일, 서명·만료 검사). `app_user` 테이블, `POST /api/auth/register|login`, `GET /api/auth/me`, `requireAuth` 미들웨어(`req.userId`), 로그인 실패 10회/15분 제한(메모리). 화면 `/login.html`(로그인·가입 탭, `?next=` 복귀), 헤더에 닉네임·로그아웃, 토큰은 `localStorage`. `.env`에 `JWT_SECRET` 필요(`.env.example`에 키만 추가). 그래서 `bcrypt`·`jsonwebtoken` 승인은 필요 없어짐
-- [ ] 즐겨찾기, Fantasy 예측·자동 채점, 게시판, 알림(폴링)
+- [x] **즐겨찾기(11.18)** — `favorite(user_id, kind driver|team, ref_id)`(사용자 삭제 시 함께 삭제), `GET /api/favorites`·`PUT|DELETE /api/favorites/:kind/:id`(JWT, 본인 것만, 없는 대상 404). 화면: 드라이버·팀 상세의 ★ 토글(`favorite.js`, 비로그인이면 로그인으로 이동 후 복귀), `/favorites.html` 목록, 헤더에 링크. 대시보드 요약·`FAV_*` 알림은 알림 기능 때 연결
+- [ ] Fantasy 예측·자동 채점, 게시판, 알림(폴링)
 - [ ] 커뮤니티 페이지
 
 ### 12.14~12.15 — 공통·제출

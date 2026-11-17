@@ -6,6 +6,7 @@ import { load, table, emptyState } from '../ui.js';
 import { barChart } from '../charts/bar.js';
 import { teamColor } from '../teams.js';
 import { points } from '../format.js';
+import { favoriteButton } from '../favorite.js';
 
 mountLayout('profiles');
 const body = h('div', { class: 'stack' });
@@ -23,7 +24,7 @@ load(body, () => api(`/teams/${encodeURIComponent(urlParam('id') ?? '')}`, { sea
     { label: '팀 포인트', align: 'right', render: (r) => h('b', null, points(r.points)) },
   ];
   return [
-    h('div', { class: 'head-bar', style: `--c:${color}` }, h('h1', null, d.team.name), h('div', { class: 'facts' }, h('span', { class: 'chip' }, `${d.season} 시즌`))),
+    h('div', { class: 'head-bar', style: `--c:${color}` }, h('h1', null, d.team.name), h('div', { class: 'facts' }, favoriteButton('team', d.team.id), h('span', { class: 'chip' }, `${d.season} 시즌`))),
     st ? h('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(180px,1fr))' },
       stat('컨스트럭터 순위', `${st.position}위`), stat('포인트', points(st.points)), stat('우승', st.wins),
       stat('선두와 격차', st.gapToLeader ? `-${points(st.gapToLeader)}` : '선두'))

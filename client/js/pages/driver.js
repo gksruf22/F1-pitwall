@@ -7,6 +7,7 @@ import { load, table, emptyState, tabs } from '../ui.js';
 import { setUrlParams } from '../api.js';
 import { teamColor } from '../teams.js';
 import { points } from '../format.js';
+import { favoriteButton } from '../favorite.js';
 
 mountLayout('profiles');
 const app = document.getElementById('app');
@@ -37,6 +38,7 @@ load(body, () => api(`/drivers/${encodeURIComponent(urlParam('id') ?? '')}`, { s
     h('div', { class: 'head-bar', style: `--c:${color}` },
       h('h1', null, d.driver.name),
       h('div', { class: 'facts' },
+        favoriteButton('driver', d.driver.id),
         d.entry && h('span', { class: 'chip' }, `#${d.entry.number}`),
         d.entry && h('a', { class: 'chip', href: `/team.html?id=${encodeURIComponent(d.entry.teamId)}&season=${d.season}` }, d.entry.teamName),
         d.driver.nationality && h('span', { class: 'chip' }, d.driver.nationality),

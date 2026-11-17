@@ -137,3 +137,11 @@ CREATE TABLE IF NOT EXISTS app_user (
   pw_hash     text NOT NULL,
   created_utc timestamptz NOT NULL DEFAULT now()
 );
+
+-- 즐겨찾기: 드라이버·팀. 사용자가 지워지면 함께 지운다.
+CREATE TABLE IF NOT EXISTS favorite (
+  user_id integer NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  kind    text NOT NULL CHECK (kind IN ('driver', 'team')),
+  ref_id  text NOT NULL,
+  PRIMARY KEY (user_id, kind, ref_id)
+);

@@ -17,7 +17,7 @@ function authBox() {
   if (!auth) return h('a', { class: 'btn', href: `/login.html?next=${encodeURIComponent(location.pathname + location.search)}` }, '로그인');
   const out = h('button', { class: 'btn', 'aria-label': '로그아웃' }, '로그아웃');
   out.addEventListener('click', () => { setAuth(null); location.reload(); });
-  return h('span', { class: 'auth-state' }, h('b', null, auth.user.nickname), out);
+  return h('span', { class: 'auth-state' }, h('a', { href: '/favorites.html' }, '즐겨찾기'), h('b', null, auth.user.nickname), out);
 }
 
 function themeButton() {
