@@ -59,7 +59,7 @@ async function init() {
     const select = h('select', { 'aria-label': '레이스 선택' }, finished.map((r) =>
       h('option', { value: r.id, selected: r.id === race.id }, `R${r.round} ${r.name}`)));
     select.addEventListener('change', () => setUrlParams({ race: select.value, session: null }));
-    mount(head, h('div', null, h('h1', null, race.name), h('div', { class: 'sub' }, `${race.circuit_name ?? ''} · ${race.season} 시즌 ${race.round}라운드`)), h('div', { class: 'row-gap' }, h('a', { class: 'btn', href: `/strategy.html?race=${race.id}` }, '레이스 페이스'), select));
+    mount(head, h('div', null, h('h1', null, race.name), h('div', { class: 'sub' }, `${race.circuit_name ?? ''} · ${race.season} 시즌 ${race.round}라운드`)), h('div', { class: 'row-gap' }, h('a', { class: 'btn', href: `/strategy.html?race=${race.id}` }, '레이스 페이스'), race.collected && h('a', { class: 'btn', href: `/live.html?race=${race.id}` }, '라이브(시뮬)'), select));
 
     const types = (race.sessions ?? []).map((x) => x.type).filter((t) => t !== 'SQ');
     const order = ['R', 'Q', 'S'].filter((t) => types.includes(t));

@@ -13,6 +13,7 @@ const RACE_SELECT = `
          c.name AS circuit_name, c.country,
          (SELECT json_agg(json_build_object('type', s.type, 'startUtc', s.start_utc) ORDER BY s.start_utc)
             FROM session s WHERE s.race_id = ra.id) AS sessions,
+         EXISTS (SELECT 1 FROM session s WHERE s.race_id = ra.id AND s.type = 'R' AND s.openf1_key IS NOT NULL) AS collected,
          EXISTS (SELECT 1 FROM session s JOIN result r ON r.session_id = s.id
                   WHERE s.race_id = ra.id AND s.type = 'R') AS finished
     FROM race ra LEFT JOIN circuit c ON c.id = ra.circuit_id`;

@@ -13,6 +13,7 @@ import news from './routes/news.js';
 import search from './routes/search.js';
 import highlights from './routes/highlights.js';
 import raceAnalysis from './routes/race-analysis.js';
+import live from './routes/live.js';
 import { scheduleNews } from './services/news.js';
 
 const app = express();
@@ -24,6 +25,7 @@ app.use('/api/standings', standings);
 app.use('/api/summary', summary);
 app.use('/api', races); // /seasons, /races ...
 app.use('/api', raceAnalysis); // /races/:id/pace
+app.use('/api', live); // /races/:id/stream (SSE)
 app.use('/api/analysis', analysis);
 app.use('/api/news', news);
 app.use('/api/search', search);

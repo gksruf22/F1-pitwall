@@ -278,7 +278,8 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 - [x] 레이스 페이스 탭 — `GET /api/races/:id/pace?clean=&cutoff=`(클린랩=1랩·인랩·아웃랩 제외+최속 랩 대비 cutoff% 초과 제외, 기본 107%), 화면 `/strategy.html?race=`(최속 랩 Top 20·Race Pace 박스플롯·Lap Times 스웜·Race Pace Evolution·Position Evolution·Gap to Leader). 패스티스트랩이 결과표와 일치함을 확인. 스피드트랩 히트맵은 수집 3건 탭에서. 선 차트(`chart-line.js`)는 format·auto·invert·결측 끊김 옵션으로 일반화 (11.17)
 - [x] 피트스톱 통계 탭 — `GET /api/pitstops?season=`(시즌 단위; 통과 시간 `lane_ms`, 90초 초과·레이스 중앙값 1.5배 초과 제외, 팀·드라이버 비교는 서킷 영향을 줄이려 **레이스 중앙값 대비**), 화면 `/strategy.html?tab=pit`(카드 6·최단 Top 20·팀 박스플롯·그랑프리별 평균(범례로 팀 분해)·컨스트럭터/드라이버 평균 막대·정지 시간 표(수집 3건, OpenF1)). 경로는 계획의 `/races/:id/pitstops` 대신 시즌 단위 `/api/pitstops` (11.17)
 - [x] 헤드투헤드 예선 격차 — `GET /api/analysis/qualifying-gap?season=`, 드라이버 비교 페이지(`/h2h.html`)에 **팀메이트 예선 격차**(팀별 점 스트립·0 기준선·Q1/Q2/Q3 색, 기준 드라이버=팀 최다 출전자, 둘 다 기록이 있는 마지막 단계 비교)와 **팀 폴 대비 격차**(Q3 진출 라운드 평균 막대) 추가. "최근 예선 강조" 토글은 아직 없음. 점 스트립은 점별 색·메모·`zero`, 막대·스트립은 `left` 옵션 추가 (11.17)
-- [ ] 라이브(SSE) → 리플레이(Canvas, 수집 3건) → 스틴트·스피드트랩 탭(수집 3건)
+- [x] 라이브(SSE 시뮬레이션) — `GET /api/races/:id/stream?speed=1|10|30|60|120&start=`(1초마다 `tick`=순위표·세션 상태, `race-event`, `end`), 화면 `/live.html?race=`(순위표: 선두/앞 차 간격·직전/최고 랩(보라=전체 최고, 초록=개인 최고)·타이어·피트·그리드 대비 변동, 이벤트 피드, "시뮬레이션" 표기, 배속 선택). 시계 = FASTEST_LAP 이벤트 시각 − 누적 랩타임(드라이버 간 오차 없이 수렴), 순위 = 완료 랩 수·라인 통과 순서라 공식 결과와 레이스 후 페널티만큼 다름. 수집된 3개 레이스만(`/api/races`에 `collected` 필드). 드라이버 상세·AI 질문 박스는 4주차 (11.17)
+- [ ] 리플레이(Canvas, 수집 3건) → 스틴트·스피드트랩 탭(수집 3건)
 - [ ] 레이스 서브내비 공통 컴포넌트
 - [ ] 5등급(Track DNA 직접 정리 데이터, 언더컷/오버컷) — 일정이 남을 때만
 
