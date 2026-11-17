@@ -158,3 +158,16 @@ CREATE TABLE IF NOT EXISTS fantasy_prediction (
   updated_utc timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, race_id)
 );
+
+-- 앱 내 알림: 같은 사건에 중복 알림이 생기지 않도록 (user_id, kind, ref_key)를 유일하게 한다.
+CREATE TABLE IF NOT EXISTS notification (
+  id          integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id     integer NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  kind        text NOT NULL,
+  ref_key     text NOT NULL,
+  text        text NOT NULL,
+  read        boolean NOT NULL DEFAULT false,
+  created_utc timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, kind, ref_key)
+);
+CREATE INDEX IF NOT EXISTS notification_user_idx ON notification (user_id, created_utc DESC);

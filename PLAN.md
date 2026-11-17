@@ -293,7 +293,8 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 - [x] **로그인(11.17)** — 의존성 없이 Node 내장 `crypto`로 구현(비밀번호 scrypt 해시, JWT HS256 7일, 서명·만료 검사). `app_user` 테이블, `POST /api/auth/register|login`, `GET /api/auth/me`, `requireAuth` 미들웨어(`req.userId`), 로그인 실패 10회/15분 제한(메모리). 화면 `/login.html`(로그인·가입 탭, `?next=` 복귀), 헤더에 닉네임·로그아웃, 토큰은 `localStorage`. `.env`에 `JWT_SECRET` 필요(`.env.example`에 키만 추가). 그래서 `bcrypt`·`jsonwebtoken` 승인은 필요 없어짐
 - [x] **즐겨찾기(11.18)** — `favorite(user_id, kind driver|team, ref_id)`(사용자 삭제 시 함께 삭제), `GET /api/favorites`·`PUT|DELETE /api/favorites/:kind/:id`(JWT, 본인 것만, 없는 대상 404). 화면: 드라이버·팀 상세의 ★ 토글(`favorite.js`, 비로그인이면 로그인으로 이동 후 복귀), `/favorites.html` 목록, 헤더에 링크. 대시보드 요약·`FAV_*` 알림은 알림 기능 때 연결
 - [x] **Fantasy 예측·자동 채점(11.18)** — 8-1 규칙 그대로: 1~3위 예측(서로 다른 3명, 그 시즌 엔트리만), 마감=예선 시작(없으면 결승 시작)을 **서버 시각**으로 검사, 마감 전 덮어쓰기, 채점 최대 12점. `fantasy_prediction` 테이블, `GET /api/fantasy/races`·`/races/:id/drivers`·`/me`·`/ranking`, `PUT /api/fantasy/predictions/:raceId`. 채점은 `scorePending()`이 결과가 들어온 레이스의 **미채점 예측만** 계산(여러 번 실행해도 안전)하며 별도 스케줄러 없이 `/me`·`/ranking` 호출 시 실행. 규칙 테스트 `npm test`(`server/services/fantasy.test.js`). 화면 `/fantasy.html`(예측 폼·내 예측·시즌 랭킹), 상단 내비에 Fantasy 추가. 값은 `server/config.js` 대신 서비스 파일 상수/SQL에 둠. R21(라스베이거스)은 실제 마감 전이라 실제 예측을 받을 수 있음
-- [ ] 게시판, 알림(폴링)
+- [x] **알림(11.18, 폴링)** — `notification` 테이블(`unique(user_id, kind, ref_key)`), 생성 작업 `createNotifications()`(멱등 SQL, 서버 시작 시 + 10분 간격): `FAV_RESULT`(즐겨찾기 드라이버 우승·포디움·득점·완주·리타이어 / 즐겨찾기 팀 포인트), `FAV_POLE`, `RACE_SOON`(결승 24시간 이내, 전체 사용자), `FANTASY_SCORED`. 새 즐겨찾기가 옛 알림을 쏟아내지 않도록 **최근 14일 결과만** 대상. `GET /api/notifications`(안 읽은 개수 포함)·`POST /:id/read`·`POST /read-all`(본인 것만). 헤더에 알림 링크+안 읽은 배지(30초 폴링), `/notifications.html`(클릭 읽음·모두 읽음). `RACE_SOON`은 실제 조건(24시간)을 지금 데이터로 재현할 수 없어 넓힌 간격으로 쿼리만 검증. 결과 수집(`ingest`) 직후 실행과 `POST_COMMENT`는 미구현(게시판 때)
+- [ ] 게시판
 - [ ] 커뮤니티 페이지
 
 ### 12.14~12.15 — 공통·제출

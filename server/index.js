@@ -17,6 +17,8 @@ import live from './routes/live.js';
 import auth from './routes/auth.js';
 import favorites from './routes/favorites.js';
 import fantasy from './routes/fantasy.js';
+import notifications from './routes/notifications.js';
+import { scheduleNotifications } from './services/notifications.js';
 import { scheduleNews } from './services/news.js';
 
 const app = express();
@@ -27,6 +29,7 @@ app.use('/api/health', health);
 app.use('/api/auth', auth);
 app.use('/api/favorites', favorites);
 app.use('/api/fantasy', fantasy);
+app.use('/api/notifications', notifications);
 app.use('/api/standings', standings);
 app.use('/api/summary', summary);
 app.use('/api', races); // /seasons, /races ...
@@ -58,4 +61,5 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`F1 PITWALL 서버: http://localhost:${port}`);
   scheduleNews(); // 뉴스 RSS: 시작 시 + 하루 1회
+  scheduleNotifications(); // 알림: 시작 시 + 10분마다
 });

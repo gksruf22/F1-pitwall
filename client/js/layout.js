@@ -1,7 +1,7 @@
 // 공통 헤더·푸터. 페이지마다 mountLayout()만 호출한다.
 import { h, mount } from './dom.js';
 import { api, urlParam, setUrlParams } from './api.js';
-import { getAuth, setAuth } from './auth.js';
+import { getAuth, setAuth, send } from './auth.js';
 
 const NAV = [
   { key: 'home', href: '/', label: '대시보드' },
@@ -18,7 +18,12 @@ function authBox() {
   if (!auth) return h('a', { class: 'btn', href: `/login.html?next=${encodeURIComponent(location.pathname + location.search)}` }, '로그인');
   const out = h('button', { class: 'btn', 'aria-label': '로그아웃' }, '로그아웃');
   out.addEventListener('click', () => { setAuth(null); location.reload(); });
-  return h('span', { class: 'auth-state' }, h('a', { href: '/favorites.html' }, '즐겨찾기'), h('b', null, auth.user.nickname), out);
+  // 알림 종: 안 읽은 개수를 30초마다 조회해 배지로 보여 준다(폴링).
+  const badge = h('span', { class: 'badge', hidden: true });
+  const bell = h('a', { href: '/notifications.html', 'aria-label': '알림' }, '알림', badge);
+  const poll = () => send('GET', '/notifications').then((d) => { badge.textContent = d.unread; badge.hidden = !d.unread; bell.setAttribute('aria-label', `알림 ${d.unread}개 안 읽음`); }).catch(() => {});
+  poll(); setInterval(poll, 30_000);
+  return h('span', { class: 'auth-state' }, h('a', { href: '/favorites.html' }, '즐겨찾기'), bell, h('b', null, auth.user.nickname), out);
 }
 
 function themeButton() {

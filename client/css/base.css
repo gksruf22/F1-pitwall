@@ -230,3 +230,9 @@ canvas.track { width: 100%; display: block; background: var(--surface); border: 
 .form-msg { color: var(--down, #e10600); min-height: 1.4em; margin: 0; font-size: 14px; }
 .auth-state { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; white-space: nowrap; }
 .auth-state b { max-width: 8em; overflow: hidden; text-overflow: ellipsis; }
+
+/* 알림 */
+.badge { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.notes li { cursor: pointer; }
+.notes li.read { color: var(--muted); }
+.notes li.unread { font-weight: 500; }
