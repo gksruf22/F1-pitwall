@@ -1,9 +1,12 @@
-// 레이스 분석(/strategy.html?tab=pace|pit): 레이스 페이스(레이스 단위)·피트스톱 통계(시즌 단위). 스틴트 탭은 같은 페이지에 이어 붙인다.
+// 레이스 분석(/strategy.html?tab=pace|stint|pit): 레이스 페이스(레이스 단위)·스틴트·스피드트랩(수집 3건)·피트스톱 통계(시즌 단위).
 import { h, mount } from '../dom.js';
 import { api, urlParam, setUrlParams } from '../api.js';
 import { mountLayout } from '../layout.js';
 import { load, table, tabs, colorBar, emptyState, errorState, skeleton } from '../ui.js';
 import { barChart } from '../charts/bar.js';
+import { gantt } from '../charts/gantt.js';
+import { heatmap } from '../charts/heatmap.js';
+import { tyreInfo, TYRE } from '../tyre.js';
 import { boxPlot } from '../charts/box.js';
 import { stripPlot } from '../charts/strip.js';
 import { lineChart } from '../chart-line.js';
@@ -14,8 +17,8 @@ mountLayout('schedule');
 const app = document.getElementById('app');
 const head = h('div', { class: 'page-head' });
 const body = h('div', { class: 'stack' });
-const tab = urlParam('tab') === 'pit' ? 'pit' : 'pace';
-const tabBar = tabs([{ key: 'pace', label: '레이스 페이스' }, { key: 'pit', label: '피트스톱' }], tab,
+const tab = ['pit', 'stint'].includes(urlParam('tab')) ? urlParam('tab') : 'pace';
+const tabBar = tabs([{ key: 'pace', label: '레이스 페이스' }, { key: 'stint', label: '스틴트·스피드트랩' }, { key: 'pit', label: '피트스톱' }], tab,
   (k) => setUrlParams({ tab: k === 'pace' ? null : k }));
 app.append(head, tabBar, body);
 
@@ -49,6 +52,46 @@ function paceView(d) {
     block('Race Pace Evolution', lineChart({ series: toSeries('times'), xLabels: lapNumbers, visible: front, format: lapTime, title: '랩별 랩타임 선 차트', auto: true, asc: true, left: 76 }), '범례를 눌러 드라이버를 켜고 끕니다'),
     block('Position Evolution', lineChart({ series: toSeries('positions'), xLabels: lapNumbers, visible: front, format: (v) => (v >= 1 ? `${v}위` : ''), title: '랩별 순위 선 차트', invert: true })),
     block('Gap to Leader', lineChart({ series: toSeries('gaps'), xLabels: lapNumbers, visible: front, format: (v) => sec(v), title: '선두 대비 갭 선 차트', invert: true, left: 76 }), '선두와의 누적 시간 차'),
+  ];
+}
+
+// 스틴트·스피드트랩(수집 3건, OpenF1): 드라이버별 타이어 전략 막대 + 컴파운드 요약 + 스피드트랩 Top 15와 순위 분포.
+function stintView(d) {
+  if (!d.drivers.length) return emptyState('이 레이스의 스틴트 데이터가 없습니다.');
+  const color = (x) => teamColor(x.teamId, x.color);
+  const rows = d.drivers.map((x) => ({
+    label: x.code ?? x.name,
+    segs: x.stints.filter((s) => s.from != null).map((s) => {
+      const to = s.to ?? d.totalLaps, [abbr, c, name] = tyreInfo(s.compound);
+      const pit = x.pits.find((p) => p.stopMs != null && Math.abs(p.lap - to) <= 1);
+      return { from: s.from, to, color: c, text: abbr, tip: [`${x.name} · 스틴트 ${s.no}`, `${name} · ${s.from}~${to}랩 (${to - s.from + 1}랩)`, pit && `다음 피트 정지 ${(pit.stopMs / 1000).toFixed(1)}초`].filter(Boolean) };
+    }),
+  }));
+  const stats = Object.keys(TYRE).map((k) => {
+    const len = d.drivers.flatMap((x) => x.stints.filter((s) => s.compound === k && s.from != null).map((s) => (s.to ?? d.totalLaps) - s.from + 1));
+    return { k, n: len.length, avg: len.length ? len.reduce((a, b) => a + b, 0) / len.length : null };
+  }).filter((r) => r.n);
+  const statTable = table([
+    { label: '타이어', render: (r) => h('div', { class: 'who' }, h('span', { class: 'tyre', style: `border-color:${tyreInfo(r.k)[1]}` }, tyreInfo(r.k)[0]), h('b', null, tyreInfo(r.k)[2])) },
+    { label: '스틴트 수', align: 'right', render: (r) => r.n },
+    { label: '평균 길이', align: 'right', render: (r) => `${r.avg.toFixed(1)}랩` },
+  ], stats);
+
+  const st = d.speedTrap;
+  const topTable = table([
+    { label: '#', render: (r) => r.rank },
+    { label: '드라이버', render: (r) => h('div', { class: 'who' }, colorBar(color(r)), h('b', null, r.name)) },
+    { label: '팀', render: (r) => r.teamName ?? '–', class: 'muted' },
+    { label: '랩', align: 'right', render: (r) => r.lap },
+    { label: '최고 속도', align: 'right', render: (r) => h('span', { class: r.rank === 1 ? 'best' : '' }, `${r.kmh} km/h`) },
+  ], st.top.map((r, i) => ({ ...r, rank: i + 1 })));
+
+  return [
+    h('p', { class: 'muted' }, 'OpenF1로 수집한 레이스 3건만 제공합니다. 막대에 마우스를 올리면 구간과 피트 정지 시간이 보입니다.'),
+    block('타이어 전략', gantt({ rows, total: d.totalLaps, title: '드라이버별 스틴트 전략' }), '결승 순위 순 · S 소프트 / M 미디엄 / H 하드'),
+    block('컴파운드 요약', statTable),
+    st.top.length ? block('스피드트랩 Top 15', topTable, '드라이버별 최고 속도') : null,
+    st.top.length ? block('스피드트랩 순위 분포', heatmap({ rows: st.ranks.map((r) => r.code), cols: Array.from({ length: 10 }, (_, i) => `${i + 1}위`), values: st.ranks.map((r) => r.counts.map((c) => c || null)), format: (v) => `${v}회`, title: '스피드트랩 순위 분포 히트맵' }), '랩마다 그 랩 기록이 있는 드라이버끼리 순위를 매겨 센 횟수') : null,
   ];
 }
 
@@ -107,15 +150,17 @@ async function init() {
   mount(body, skeleton());
   try {
     const { races } = await api('/races', { season: urlParam('season') });
-    const finished = races.filter((r) => r.finished);
-    if (!finished.length) return mount(body, emptyState('결과가 있는 레이스가 없습니다.'));
+    const finished = tab === 'stint' ? races.filter((r) => r.collected) : races.filter((r) => r.finished);
+    if (!finished.length) return mount(body, emptyState(tab === 'stint' ? '스틴트 데이터가 수집된 레이스가 없습니다.' : '결과가 있는 레이스가 없습니다.'));
     const race = finished.find((r) => r.id === Number(urlParam('race'))) ?? finished.at(-1);
     const clean = urlParam('clean') !== 'false';
     const cutoff = Number(urlParam('cutoff')) || 107;
 
     const select = h('select', { 'aria-label': '레이스 선택' }, finished.map((r) => h('option', { value: r.id, selected: r.id === race.id }, `R${r.round} ${r.name}`)));
     select.addEventListener('change', () => setUrlParams({ race: select.value }));
-    mount(head, h('div', null, h('h1', null, `${race.name} 레이스 페이스`), h('div', { class: 'sub' }, `${race.circuit_name ?? ''} · ${race.season} 시즌 ${race.round}라운드`)), select);
+    mount(head, h('div', null, h('h1', null, `${race.name} ${tab === 'stint' ? '스틴트·스피드트랩' : '레이스 페이스'}`), h('div', { class: 'sub' }, `${race.circuit_name ?? ''} · ${race.season} 시즌 ${race.round}라운드`)), select);
+
+    if (tab === 'stint') return load(body, () => api(`/races/${race.id}/strategy`), stintView);
 
     const cutoffLabel = h('b', null, `${cutoff}%`);
     const slider = h('input', { type: 'range', min: 101, max: 150, value: cutoff, 'aria-label': '이상치 컷오프(%)', disabled: !clean });

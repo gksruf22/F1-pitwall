@@ -5,6 +5,7 @@ import { mountLayout } from '../layout.js';
 import { table, tabs, colorBar, emptyState, errorState, skeleton } from '../ui.js';
 import { teamColor } from '../teams.js';
 import { trackMap } from '../trackmap.js';
+import { tyreInfo } from '../tyre.js';
 import { lapTime } from '../format.js';
 
 mountLayout('schedule');
@@ -12,7 +13,6 @@ const app = document.getElementById('app');
 const SPEEDS = [1, 10, 30, 60, 120];
 let speed = SPEEDS.includes(Number(urlParam('speed'))) ? Number(urlParam('speed')) : 30;
 const STATE = { GREEN: ['그린', 'ok'], SC: ['세이프티카', 'warn'], VSC: ['가상 세이프티카', 'warn'], RED: ['레드 플래그', 'bad'], FINISHED: ['종료', ''] };
-const TYRE = { SOFT: ['S', '#e10600'], MEDIUM: ['M', '#f5c400'], HARD: ['H', '#e5e5e5'], INTERMEDIATE: ['I', '#2bb24c'], WET: ['W', '#2f7de1'] };
 
 const clock = (ms) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
 const eventText = (e) => {
@@ -41,7 +41,7 @@ const columns = [
   { label: '앞 차와', align: 'right', render: (r) => (r.intervalMs == null ? '–' : `+${(r.intervalMs / 1000).toFixed(3)}`), class: 'muted' },
   { label: '직전 랩', align: 'right', render: (r) => (r.lastMs == null ? '–' : h('span', { class: r.lastMs === r.bestMs ? (r.overallBest ? 'best' : 'up') : '' }, lapTime(r.lastMs))) },
   { label: '최고 랩', align: 'right', render: (r) => (r.bestMs == null ? '–' : lapTime(r.bestMs)), class: 'muted' },
-  { label: '타이어', render: (r) => { const [l, c] = TYRE[r.tyre] ?? ['?', '#888']; return h('span', { class: 'tyre', style: `border-color:${c}` }, l); } },
+  { label: '타이어', render: (r) => { const [l, c] = tyreInfo(r.tyre); return h('span', { class: 'tyre', style: `border-color:${c}` }, l); } },
   { label: '피트', align: 'right', render: (r) => r.pits },
 ];
 

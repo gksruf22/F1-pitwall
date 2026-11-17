@@ -1,4 +1,4 @@
-// 레이스·피트 분석 API: /api/races/:id/pace, /api/pitstops (Jolpica 랩별 시간·포지션·피트레인 통과 시간으로 시즌 전체 가능)
+// 레이스·피트 분석 API: /api/races/:id/pace, /api/races/:id/strategy(수집 3건), /api/pitstops (Jolpica 랩별 시간·포지션·피트레인 통과 시간으로 시즌 전체 가능)
 import { Router } from 'express';
 import { query } from '../db.js';
 import { cached } from '../cache.js';
@@ -129,6 +129,45 @@ router.get('/pitstops', async (req, res) => {
       top, teams, drivers, rounds, stopTimes, stopRaces: [...new Set(rows.filter((r) => r.stopMs != null).map((r) => r.raceName))],
     };
   });
+  res.json(data);
+});
+
+// 스틴트·스피드트랩(OpenF1 수집 레이스만). 스피드트랩 순위는 랩마다 그 랩에 기록이 있는 드라이버끼리 매긴다.
+router.get('/races/:id/strategy', async (req, res) => {
+  const id = intParam(req.params.id, 'id');
+  const data = await cached(`strategy:${id}`, TTL, async () => {
+    const { rows: [race] } = await query(
+      `SELECT ra.id, ra.name, ra.round, s.id AS "sessionId" FROM race ra JOIN session s ON s.race_id = ra.id AND s.type = 'R'
+        WHERE ra.id = $1 AND s.openf1_key IS NOT NULL`, [id]);
+    if (!race) return null;
+    const sid = race.sessionId;
+    const [{ rows: drivers }, { rows: stints }, { rows: pits }, { rows: speeds }] = await Promise.all([
+      query(`SELECT d.id, d.code, d.name, t.id AS "teamId", t.name AS "teamName", t.color, r.position FROM result r JOIN driver d ON d.id = r.driver_id
+              LEFT JOIN team t ON t.id = r.team_id WHERE r.session_id = $1 ORDER BY r.position NULLS LAST, d.name`, [sid]),
+      query('SELECT driver_id AS id, no, lap_from AS "from", lap_to AS "to", compound FROM stint WHERE session_id = $1 ORDER BY driver_id, no', [sid]),
+      query('SELECT driver_id AS id, lap, stop_ms AS "stopMs" FROM pit_stop WHERE session_id = $1 ORDER BY lap', [sid]),
+      query('SELECT driver_id AS id, lap, st_speed AS kmh FROM lap WHERE session_id = $1 AND st_speed IS NOT NULL', [sid]),
+    ]);
+    const totalLaps = Math.max(0, ...stints.map((s) => s.to ?? 0));
+    const out = drivers.map((d) => ({
+      ...d, stints: stints.filter((s) => s.id === d.id).map(({ id: _, ...s }) => s), pits: pits.filter((p) => p.id === d.id).map(({ id: _, ...p }) => p),
+    })).filter((d) => d.stints.length);
+
+    // 스피드트랩: 드라이버별 최고 속도 + 랩별 순위 분포(1~10위 횟수)
+    const best = new Map();
+    for (const s of speeds) if (!best.has(s.id) || s.kmh > best.get(s.id).kmh) best.set(s.id, s);
+    const byId = new Map(drivers.map((d) => [d.id, d]));
+    const top = [...best.values()].sort((a, b) => b.kmh - a.kmh).slice(0, 15).map((s) => ({ ...byId.get(s.id), kmh: s.kmh, lap: s.lap }));
+    const counts = new Map(top.map((d) => [d.id, Array(10).fill(0)]));
+    for (const lapSpeeds of Map.groupBy(speeds, (s) => s.lap).values()) {
+      lapSpeeds.sort((a, b) => b.kmh - a.kmh).forEach((s, i) => { if (i < 10 && counts.has(s.id)) counts.get(s.id)[i]++; });
+    }
+    return {
+      race: { id: race.id, name: race.name, round: race.round }, totalLaps, drivers: out,
+      speedTrap: { top, ranks: top.map((d) => ({ code: d.code, counts: counts.get(d.id) })) },
+    };
+  });
+  if (!data) throw new HttpError(404, 'NOT_FOUND', '스틴트·스피드트랩 데이터가 수집된 레이스가 아닙니다.');
   res.json(data);
 });
 
