@@ -4,6 +4,8 @@ import { api, urlParam, setUrlParams } from '../api.js';
 import { mountLayout, analysisTabs } from '../layout.js';
 import { load, table, emptyState, errorState, skeleton } from '../ui.js';
 import { teamColor } from '../teams.js';
+import { stripPlot } from '../charts/strip.js';
+import { barChart } from '../charts/bar.js';
 
 mountLayout('analysis');
 const season = urlParam('season');
@@ -21,6 +23,25 @@ function picker(drivers) {
 }
 const alertSame = () => mount(result, errorState('서로 다른 드라이버 2명을 선택하세요.'));
 const result = h('div', { class: 'stack' });
+
+// 팀메이트 예선 격차(점 스트립, 0 기준)와 팀 폴 대비 격차(막대). 값은 Jolpica 예선 Q1/Q2/Q3 기록.
+const STAGE = { Q1: '#9ca3af', Q2: '#f59e0b', Q3: 'var(--accent)' };
+const sec3 = (ms) => `${ms >= 0 ? '+' : '−'}${Math.abs(ms / 1000).toFixed(3)}초`;
+const gapSection = h('div', { class: 'stack' });
+const gapView = ({ teams }) => {
+  const dots = teams.filter((t) => t.points.length);
+  const withPole = teams.filter((t) => t.poleGapMs != null);
+  return [
+    h('section', null, h('div', { class: 'section-title' }, h('h2', null, '팀메이트 예선 격차'),
+      h('span', { class: 'muted' }, '왼쪽 = 괄호 안 기준 드라이버가 빠름 · 둘 다 기록이 있는 마지막 단계 비교')),
+    h('div', { class: 'legend' }, Object.entries(STAGE).map(([k, c]) => h('span', { style: 'margin-right:14px' }, h('span', { style: `color:${c}` }, '● '), k))),
+    dots.length ? stripPlot({ zero: true, left: 200, format: sec3, title: '팀메이트 예선 격차 점 스트립', groups: dots.map((t) => ({
+      label: `${t.name} (${t.refCode})`, color: teamColor(t.id, t.color),
+      values: t.points.map((p) => ({ v: p.gapMs, color: STAGE[p.stage], note: `R${p.round} ${p.raceName} · ${p.stage} · vs ${p.mate}` })) })) }) : emptyState('비교할 예선 기록이 없습니다.')),
+    h('section', null, h('div', { class: 'section-title' }, h('h2', null, '팀 폴 대비 격차'), h('span', { class: 'muted' }, 'Q3 진출 라운드 평균(괄호 = 라운드 수) · 팀 최고 기록 − 폴 기록')),
+      withPole.length ? barChart({ items: withPole.map((t) => ({ label: `${t.name} (${t.poleRounds}R)`, value: t.poleGapMs, color: teamColor(t.id, t.color) })), left: 200, format: (v) => `+${(v / 1000).toFixed(3)}초`, title: '팀 폴 대비 격차' }) : emptyState('Q3 기록이 없습니다.')),
+  ];
+};
 
 // 두 사람의 승수를 한 줄 막대로 나눠 보여준다.
 function duelCard(title, r, A, B) {
@@ -40,7 +61,8 @@ async function show() {
     h('a', { class: 'pcard', href: `?${new URLSearchParams({ ...(season ? { season } : {}), a: p.a.id, b: p.b.id })}`, style: `--c:${teamColor(p.teamId, p.color)}` },
       h('div', { class: 'nm' }, `${p.a.code} vs ${p.b.code}`), h('div', { class: 'muted' }, `${p.teamName} 팀메이트`))));
   mount(body, h('section', null, h('div', { class: 'section-title' }, h('h2', null, '팀메이트 비교')), presetCards),
-    h('section', null, h('div', { class: 'section-title' }, h('h2', null, '직접 선택')), picker(drivers)), result);
+    h('section', null, h('div', { class: 'section-title' }, h('h2', null, '직접 선택')), picker(drivers)), result, gapSection);
+  load(gapSection, () => api('/analysis/qualifying-gap', { season }), gapView);
   if (a && b) await load(result, () => api('/analysis/h2h', { season, a, b }), (d) => [
     h('h2', null, `${d.a.name} vs ${d.b.name}`),
     h('div', { class: 'grid cols-3' }, duelCard('예선', d.qualifying, d.a, d.b), duelCard('결승', d.race, d.a, d.b), duelCard('스프린트', d.sprint, d.a, d.b)),

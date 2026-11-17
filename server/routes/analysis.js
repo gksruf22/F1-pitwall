@@ -1,4 +1,4 @@
-// 분석 API: /api/analysis/driver-stats/:id, /consistency, /h2h, /h2h/presets (모두 result·lap에서 SQL로 계산, 저장하지 않음)
+// 분석 API: /api/analysis/driver-stats/:id, /consistency, /h2h, /h2h/presets, /qualifying-gap (모두 result·lap에서 SQL로 계산, 저장하지 않음)
 import { Router } from 'express';
 import { query } from '../db.js';
 import { cached } from '../cache.js';
@@ -206,6 +206,48 @@ router.get('/h2h/presets', async (req, res) => {
     }));
   });
   res.json({ season, presets });
+});
+
+// 팀메이트 예선 격차 + 팀 폴 대비 격차.
+// 팀의 기준 드라이버 = 그 시즌 해당 팀 예선 출전이 가장 많은 사람. 같은 라운드에 기준 드라이버와 다른 팀메이트가 모두
+// 기록이 있으면, 둘 다 시간이 있는 가장 마지막 단계(Q3>Q2>Q1)의 기록을 비교한다. gapMs = 기준 − 팀메이트(음수 = 기준이 빠름).
+// 폴 대비 격차 = Q3에 오른 팀 드라이버 중 최고 기록 − 그 라운드 폴 기록의 평균.
+router.get('/qualifying-gap', async (req, res) => {
+  const season = await seasonParam(req.query.season);
+  const data = await cached(`qgap:${season}`, TTL, async () => {
+    const { rows } = await query(
+      `SELECT ra.round, ra.name AS "raceName", r.q1_ms AS q1, r.q2_ms AS q2, r.q3_ms AS q3,
+              d.id AS "driverId", d.code, t.id AS "teamId", t.name AS "teamName", t.color
+         FROM result r JOIN session s ON s.id = r.session_id JOIN race ra ON ra.id = s.race_id
+         JOIN driver d ON d.id = r.driver_id JOIN team t ON t.id = r.team_id
+        WHERE ra.season = $1 AND s.type = 'Q'`, [season]);
+    const poles = new Map();
+    for (const r of rows) if (r.q3 != null) poles.set(r.round, Math.min(poles.get(r.round) ?? Infinity, r.q3));
+
+    const teams = [...Map.groupBy(rows, (r) => r.teamId)].map(([id, list]) => {
+      const counts = new Map();
+      for (const r of list) counts.set(r.driverId, (counts.get(r.driverId) ?? 0) + 1);
+      const refId = [...counts].sort((a, b) => b[1] - a[1])[0][0];
+      const ref = list.find((r) => r.driverId === refId);
+      const points = [];
+      for (const [round, rs] of Map.groupBy(list, (r) => r.round)) {
+        const me = rs.find((r) => r.driverId === refId);
+        const mate = rs.find((r) => r.driverId !== refId);
+        if (!me || !mate) continue;
+        const stage = ['q3', 'q2', 'q1'].find((k) => me[k] != null && mate[k] != null);
+        if (stage) points.push({ round, raceName: me.raceName, stage: stage.toUpperCase(), gapMs: me[stage] - mate[stage], mate: mate.code });
+      }
+      const poleGaps = [...Map.groupBy(list.filter((r) => r.q3 != null), (r) => r.round)]
+        .map(([round, rs]) => Math.min(...rs.map((r) => r.q3)) - poles.get(round));
+      return {
+        id, name: ref.teamName, color: ref.color, refCode: ref.code, points: points.sort((a, b) => a.round - b.round),
+        avgGapMs: points.length ? points.reduce((s, p) => s + p.gapMs, 0) / points.length : null,
+        poleGapMs: poleGaps.length ? poleGaps.reduce((s, v) => s + v, 0) / poleGaps.length : null, poleRounds: poleGaps.length,
+      };
+    }).sort((a, b) => (a.poleGapMs ?? Infinity) - (b.poleGapMs ?? Infinity));
+    return { season, teams };
+  });
+  res.json(data);
 });
 
 export default router;

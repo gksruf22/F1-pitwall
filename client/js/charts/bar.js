@@ -2,7 +2,7 @@
 import { s, h } from '../dom.js';
 import { W, chartBox, svgRoot, niceTicks, linear, xAxis, yAxis, label } from './core.js';
 
-export function barChart({ items, horizontal = true, format = String, title = '막대 차트' }) {
+export function barChart({ items, horizontal = true, format = String, left = 130, title = '막대 차트' }) {
   const { box, showTip, hideTip } = chartBox();
   const max = Math.max(...items.map((d) => d.value), 1);
   const ticks = niceTicks(0, max, 5);
@@ -13,7 +13,7 @@ export function barChart({ items, horizontal = true, format = String, title = '�
   };
 
   if (horizontal) {
-    const M = { l: 130, r: 48, t: 8, b: 26 }, row = 28;
+    const M = { l: left, r: 48, t: 8, b: 26 }, row = 28;
     const H = M.t + M.b + items.length * row;
     const svg = svgRoot(H, title);
     const X = linear(0, top, M.l, W - M.r);
