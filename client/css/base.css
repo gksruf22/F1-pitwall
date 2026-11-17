@@ -15,7 +15,7 @@ h2 { font-size: 18px; font-weight: 700; }
 
 /* 헤더 */
 .site-header {
-  display: flex; align-items: center; gap: 24px; padding: 0 var(--gutter); height: 72px;
+  display: flex; align-items: center; gap: 24px; padding: 0 var(--gutter); min-height: 72px;
   border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 10;
 }
 .logo { font-weight: 900; font-size: 20px; letter-spacing: .08em; text-decoration: none; }
@@ -27,7 +27,7 @@ h2 { font-size: 18px; font-weight: 700; }
 }
 .nav a[aria-current='page'] { color: var(--text); border-color: var(--accent); }
 .nav a:hover { color: var(--text); }
-.tools { display: flex; gap: 8px; align-items: center; }
+.tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 select, .btn {
   background: var(--surface); color: var(--text); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 7px 12px; font: inherit; cursor: pointer;
@@ -35,8 +35,8 @@ select, .btn {
 .btn { text-decoration: none; display: inline-block; white-space: nowrap; }
 .btn:hover, select:hover { border-color: var(--muted); }
 .btn.primary { border-color: var(--accent); }
-@media (max-width: 720px) {
-  .site-header { flex-wrap: wrap; height: auto; padding-top: 10px; padding-bottom: 6px; gap: 8px 12px; }
+@media (max-width: 960px) {
+  .site-header { flex-wrap: wrap; min-height: 0; padding-top: 10px; padding-bottom: 6px; gap: 8px 12px; }
   .nav { order: 3; flex-basis: 100%; }
   .tools { margin-left: auto; }
 }

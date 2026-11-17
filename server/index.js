@@ -16,6 +16,7 @@ import raceAnalysis from './routes/race-analysis.js';
 import live from './routes/live.js';
 import auth from './routes/auth.js';
 import favorites from './routes/favorites.js';
+import fantasy from './routes/fantasy.js';
 import { scheduleNews } from './services/news.js';
 
 const app = express();
@@ -25,6 +26,7 @@ app.use(express.json());
 app.use('/api/health', health);
 app.use('/api/auth', auth);
 app.use('/api/favorites', favorites);
+app.use('/api/fantasy', fantasy);
 app.use('/api/standings', standings);
 app.use('/api/summary', summary);
 app.use('/api', races); // /seasons, /races ...

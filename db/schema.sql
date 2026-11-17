@@ -145,3 +145,16 @@ CREATE TABLE IF NOT EXISTS favorite (
   ref_id  text NOT NULL,
   PRIMARY KEY (user_id, kind, ref_id)
 );
+
+-- Fantasy 포디움 예측: 레이스당 1인 1건(마감 전 덮어쓰기). score·exact는 결과가 들어온 뒤 채점되면 채워진다.
+CREATE TABLE IF NOT EXISTS fantasy_prediction (
+  user_id     integer NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  race_id     integer NOT NULL REFERENCES race(id) ON DELETE CASCADE,
+  p1          text NOT NULL REFERENCES driver(id),
+  p2          text NOT NULL REFERENCES driver(id),
+  p3          text NOT NULL REFERENCES driver(id),
+  score       integer,
+  exact       integer,
+  updated_utc timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, race_id)
+);
