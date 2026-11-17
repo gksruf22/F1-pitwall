@@ -1,7 +1,7 @@
 // 라이브 타이밍(시뮬레이션): 서버가 SSE로 보내는 과거 레이스 순위표·이벤트를 그대로 그린다. 실제 실시간 데이터가 아니다.
 import { h, mount } from '../dom.js';
 import { api, urlParam, setUrlParams } from '../api.js';
-import { mountLayout } from '../layout.js';
+import { mountLayout, raceTabs } from '../layout.js';
 import { table, tabs, colorBar, emptyState, errorState, skeleton } from '../ui.js';
 import { teamColor } from '../teams.js';
 import { trackMap } from '../trackmap.js';
@@ -47,7 +47,8 @@ const columns = [
 
 const head = h('div', { class: 'page-head' });
 const body = h('div', { class: 'stack' });
-app.append(head, body);
+const nav = h('div');
+app.append(head, nav, body);
 let source = null, stopMap = null;
 
 function start(race, races) {
@@ -56,6 +57,7 @@ function start(race, races) {
   mount(head, h('div', null, h('h1', null, `${race.name} 라이브 타이밍`),
     h('div', { class: 'sub' }, h('span', { class: 'pill warn' }, '시뮬레이션'), ' 과거 레이스를 재생합니다(실제 실시간 데이터 아님)')), select);
 
+  mount(nav, raceTabs('live', race));
   const pill = h('span', { class: 'pill' }, '연결 중');
   const lapEl = h('b', { class: 'num' }, '–'), clockEl = h('span', { class: 'num muted' }, '0:00:00');
   const tbody = h('div', null, skeleton(8, 32));

@@ -1,8 +1,8 @@
 // 레이스 분석(/strategy.html?tab=pace|stint|pit): 레이스 페이스(레이스 단위)·스틴트·스피드트랩(수집 3건)·피트스톱 통계(시즌 단위).
 import { h, mount } from '../dom.js';
 import { api, urlParam, setUrlParams } from '../api.js';
-import { mountLayout } from '../layout.js';
-import { load, table, tabs, colorBar, emptyState, errorState, skeleton } from '../ui.js';
+import { mountLayout, raceTabs } from '../layout.js';
+import { load, table, colorBar, emptyState, errorState, skeleton } from '../ui.js';
 import { barChart } from '../charts/bar.js';
 import { gantt } from '../charts/gantt.js';
 import { heatmap } from '../charts/heatmap.js';
@@ -18,9 +18,8 @@ const app = document.getElementById('app');
 const head = h('div', { class: 'page-head' });
 const body = h('div', { class: 'stack' });
 const tab = ['pit', 'stint'].includes(urlParam('tab')) ? urlParam('tab') : 'pace';
-const tabBar = tabs([{ key: 'pace', label: '레이스 페이스' }, { key: 'stint', label: '스틴트·스피드트랩' }, { key: 'pit', label: '피트스톱' }], tab,
-  (k) => setUrlParams({ tab: k === 'pace' ? null : k }));
-app.append(head, tabBar, body);
+const nav = h('div');
+app.append(head, nav, body);
 
 const block = (title, node, note) => h('section', null, h('div', { class: 'section-title' }, h('h2', null, title), note && h('span', { class: 'muted' }, note)), node);
 const sec = (ms) => `${(ms / 1000).toFixed(1)}초`;
@@ -143,16 +142,17 @@ function pitView(d) {
 }
 
 async function init() {
-  if (tab === 'pit') {
-    mount(head, h('div', null, h('h1', null, '피트스톱 통계'), h('div', { class: 'sub' }, `${urlParam('season') ?? '최신'} 시즌 전체`)));
-    return load(body, () => api('/pitstops', { season: urlParam('season') }), pitView);
-  }
   mount(body, skeleton());
   try {
     const { races } = await api('/races', { season: urlParam('season') });
     const finished = tab === 'stint' ? races.filter((r) => r.collected) : races.filter((r) => r.finished);
     if (!finished.length) return mount(body, emptyState(tab === 'stint' ? '스틴트 데이터가 수집된 레이스가 없습니다.' : '결과가 있는 레이스가 없습니다.'));
     const race = finished.find((r) => r.id === Number(urlParam('race'))) ?? finished.at(-1);
+    mount(nav, raceTabs(tab, race));
+    if (tab === 'pit') { // 시즌 단위 화면이라 레이스 선택기는 없고, 탭 이동용으로만 레이스를 유지한다.
+      mount(head, h('div', null, h('h1', null, '피트스톱 통계'), h('div', { class: 'sub' }, `${race.season} 시즌 전체`)));
+      return load(body, () => api('/pitstops', { season: urlParam('season') }), pitView);
+    }
     const clean = urlParam('clean') !== 'false';
     const cutoff = Number(urlParam('cutoff')) || 107;
 

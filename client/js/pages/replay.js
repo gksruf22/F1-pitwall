@@ -2,7 +2,7 @@
 // 시계: tRace(ms) = 레이스 시작(라이트 아웃) 기준. 위치 파일의 시간 = tRace + meta.offsetMs.
 import { h, mount } from '../dom.js';
 import { api, urlParam, setUrlParams } from '../api.js';
-import { mountLayout } from '../layout.js';
+import { mountLayout, raceTabs } from '../layout.js';
 import { load, tabs, emptyState, errorState, skeleton } from '../ui.js';
 import { teamColor } from '../teams.js';
 import { trackMap } from '../trackmap.js';
@@ -15,7 +15,8 @@ const MARK = { SAFETY_CAR: ['var(--warn)', '세이프티카/VSC'], RED_FLAG: ['v
 
 const head = h('div', { class: 'page-head' });
 const body = h('div', { class: 'stack' });
-app.append(head, body);
+const nav = h('div');
+app.append(head, nav, body);
 let stop = null; // 이전 레이스의 애니메이션 정리
 
 // 완료 랩 수: 통과 시각 배열(cum[0]=0)에서 t 이하인 마지막 인덱스
@@ -28,6 +29,7 @@ async function startReplay(race, races) {
   mount(head, h('div', null, h('h1', null, `${race.name} 리플레이`),
     h('div', { class: 'sub' }, h('span', { class: 'pill warn' }, '리플레이'), ' 수집된 위치 데이터(2초 간격)를 보간해 재생합니다')), select);
 
+  mount(nav, raceTabs('replay', race));
   await load(body, async () => {
     const meta = await api(`/races/${race.id}/replay`);
     const res = await fetch(`/data/replay/${meta.sessionId}.json`);

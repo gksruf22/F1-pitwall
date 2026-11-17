@@ -78,6 +78,23 @@ export function profileTabs(active) {
   ].map(([key, href, label]) => h('a', { href: href + q, 'aria-current': key === active ? 'page' : null }, label)));
 }
 
+// 레이스 서브내비: 결과·분석·라이브·리플레이가 같은 레이스(race id)를 유지한 채 오간다.
+// race: { id, collected } — OpenF1 수집 레이스(collected)만 스틴트·라이브·리플레이를 가진다.
+export function raceTabs(active, race) {
+  const season = urlParam('season');
+  const href = (path, extra = {}) => `${path}?${new URLSearchParams({ ...(season ? { season } : {}), race: race.id, ...extra })}`;
+  const items = [
+    ['results', href('/results.html'), '결과', true],
+    ['pace', href('/strategy.html'), '레이스 페이스', true],
+    ['stint', href('/strategy.html', { tab: 'stint' }), '스틴트·스피드트랩', race.collected],
+    ['pit', href('/strategy.html', { tab: 'pit' }), '피트스톱', true],
+    ['live', href('/live.html'), '라이브(시뮬)', race.collected],
+    ['replay', href('/replay.html'), '리플레이', race.collected],
+  ];
+  return h('nav', { class: 'tabs', 'aria-label': '레이스' }, items.filter((i) => i[3]).map(([key, to, label]) =>
+    h('a', { href: to, 'aria-current': key === active ? 'page' : null }, label)));
+}
+
 // 분석 페이지 공통 탭 (일관성 · 드라이버 비교)
 export function analysisTabs(active) {
   const season = urlParam('season');
