@@ -128,3 +128,12 @@ CREATE TABLE IF NOT EXISTS news (
   published_utc timestamptz
 );
 CREATE INDEX IF NOT EXISTS news_published_idx ON news (published_utc DESC);
+
+-- 참여 기능: 사용자(이메일은 소문자로 저장해 대소문자 중복을 막는다)
+CREATE TABLE IF NOT EXISTS app_user (
+  id          integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  email       text NOT NULL UNIQUE,
+  nickname    text NOT NULL,
+  pw_hash     text NOT NULL,
+  created_utc timestamptz NOT NULL DEFAULT now()
+);

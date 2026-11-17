@@ -14,6 +14,7 @@ import search from './routes/search.js';
 import highlights from './routes/highlights.js';
 import raceAnalysis from './routes/race-analysis.js';
 import live from './routes/live.js';
+import auth from './routes/auth.js';
 import { scheduleNews } from './services/news.js';
 
 const app = express();
@@ -21,6 +22,7 @@ const clientDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../cl
 
 app.use(express.json());
 app.use('/api/health', health);
+app.use('/api/auth', auth);
 app.use('/api/standings', standings);
 app.use('/api/summary', summary);
 app.use('/api', races); // /seasons, /races ...

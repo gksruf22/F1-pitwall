@@ -220,3 +220,13 @@ canvas.track { width: 100%; display: block; background: var(--surface); border: 
 .timeline { position: relative; height: 32px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
 .timeline .mark { position: absolute; top: 6px; width: 6px; height: 20px; padding: 0; border: 0; border-radius: 2px; cursor: pointer; transform: translateX(-3px); }
 .timeline .cursor { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); pointer-events: none; }
+
+/* 로그인·가입 */
+.auth-box { max-width: 420px; }
+.form { display: grid; gap: 14px; }
+.field { display: grid; gap: 6px; font-size: 14px; }
+.field input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font: inherit; }
+.field input:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+.form-msg { color: var(--down, #e10600); min-height: 1.4em; margin: 0; font-size: 14px; }
+.auth-state { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; white-space: nowrap; }
+.auth-state b { max-width: 8em; overflow: hidden; text-overflow: ellipsis; }

@@ -1,6 +1,7 @@
 // 공통 헤더·푸터. 페이지마다 mountLayout()만 호출한다.
 import { h, mount } from './dom.js';
 import { api, urlParam, setUrlParams } from './api.js';
+import { getAuth, setAuth } from './auth.js';
 
 const NAV = [
   { key: 'home', href: '/', label: '대시보드' },
@@ -9,6 +10,15 @@ const NAV = [
   { key: 'analysis', href: '/consistency.html', label: '분석' },
   { key: 'news', href: '/news.html', label: '뉴스' },
 ];
+
+// 로그인 상태: 로그아웃 상태면 로그인 링크, 로그인 상태면 닉네임과 로그아웃 버튼
+function authBox() {
+  const auth = getAuth();
+  if (!auth) return h('a', { class: 'btn', href: `/login.html?next=${encodeURIComponent(location.pathname + location.search)}` }, '로그인');
+  const out = h('button', { class: 'btn', 'aria-label': '로그아웃' }, '로그아웃');
+  out.addEventListener('click', () => { setAuth(null); location.reload(); });
+  return h('span', { class: 'auth-state' }, h('b', null, auth.user.nickname), out);
+}
 
 function themeButton() {
   const btn = h('button', { class: 'btn', 'aria-label': '테마 전환' });
@@ -47,7 +57,7 @@ export function mountLayout(active) {
     h('a', { class: 'logo', href: '/' }, 'F1 ', h('b', null, 'PITWALL')),
     h('nav', { class: 'nav', 'aria-label': '주 메뉴' }, NAV.map((n) =>
       h('a', { href: n.href, 'aria-current': n.key === active ? 'page' : null }, n.label))),
-    h('div', { class: 'tools' }, searchBox(), seasonSelect(), themeButton()));
+    h('div', { class: 'tools' }, searchBox(), seasonSelect(), authBox(), themeButton()));
 
   const footer = document.getElementById('app-footer');
   footer.className = 'site-footer';
