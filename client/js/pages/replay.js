@@ -5,6 +5,7 @@ import { api, urlParam, setUrlParams } from '../api.js';
 import { mountLayout } from '../layout.js';
 import { load, tabs, emptyState, errorState, skeleton } from '../ui.js';
 import { teamColor } from '../teams.js';
+import { trackMap } from '../trackmap.js';
 
 mountLayout('schedule');
 const app = document.getElementById('app');
@@ -36,74 +37,13 @@ async function startReplay(race, races) {
 }
 
 function build(meta, pos) {
-  const codes = meta.drivers.map((d) => d.code).filter((c) => pos.drivers[c]);
-  const first = pos.drivers[codes[0]];
-  const T = first.map((p) => p[0]); // 모든 드라이버가 같은 시각 배열을 공유한다
+  const map = trackMap(pos, meta.drivers);
+  const { canvas, codes } = map;
   const byCode = new Map(meta.drivers.map((d) => [d.code, d]));
   const leaderEnd = Array.from({ length: meta.totalLaps + 1 }, (_, k) => Math.min(...meta.drivers.map((d) => d.cum[k] ?? Infinity)));
 
-  // 좌표 범위 → 캔버스 변환
-  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-  for (const c of codes) for (const p of pos.drivers[c]) { x0 = Math.min(x0, p[1]); x1 = Math.max(x1, p[1]); y0 = Math.min(y0, p[2]); y1 = Math.max(y1, p[2]); }
-
-  const canvas = h('canvas', { class: 'track', 'aria-label': '트랙맵 리플레이' });
-  const ctx = canvas.getContext('2d');
-  let W = 0, H = 0, scale = 1, ox = 0, oy = 0, bg = null;
-  const tx = (x) => ox + (x - x0) * scale, ty = (y) => oy + (y1 - y) * scale; // y축 뒤집기
-
-  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  function layout() {
-    const dpr = window.devicePixelRatio || 1;
-    W = canvas.clientWidth; H = Math.min(Math.round(W * 0.72), 640);
-    canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.height = `${H}px`;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const pad = 28;
-    scale = Math.min((W - pad * 2) / (x1 - x0), (H - pad * 2) / (y1 - y0));
-    ox = (W - (x1 - x0) * scale) / 2; oy = (H - (y1 - y0) * scale) / 2;
-    // 트랙 윤곽: 모든 드라이버 궤적을 굵은 선으로 겹쳐 오프스크린에 한 번만 그린다(샘플 위상이 달라 코너가 메워진다).
-    bg = document.createElement('canvas'); bg.width = canvas.width; bg.height = canvas.height;
-    const b = bg.getContext('2d');
-    b.setTransform(dpr, 0, 0, dpr, 0, 0);
-    b.lineWidth = 9; b.lineCap = 'round'; b.lineJoin = 'round'; b.strokeStyle = css('--border') || '#333';
-    for (const c of codes) {
-      // 샘플 간격이 약 160m라 직선으로 이으면 코너가 잘린다 → 중간점을 지나는 2차 곡선으로 잇는다.
-      let prev = null;
-      b.beginPath();
-      for (const p of pos.drivers[c]) {
-        const X = tx(p[1]), Y = ty(p[2]);
-        if (!prev || Math.hypot(p[1] - prev.x, p[2] - prev.y) > 3000) b.moveTo(X, Y); // 300m 넘는 점프(데이터 공백)는 잇지 않는다
-        else b.quadraticCurveTo(prev.X, prev.Y, (prev.X + X) / 2, (prev.Y + Y) / 2);
-        prev = { x: p[1], y: p[2], X, Y };
-      }
-      b.stroke();
-    }
-  }
-
   let t = 0, playing = false, speed = 10, tracked = null, last = 0, raf = 0;
-  const fileT = () => t + meta.offsetMs;
-  function at(c, ft) {
-    const a = pos.drivers[c];
-    let lo = 0, hi = T.length - 1;
-    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (T[m] <= ft) lo = m; else hi = m - 1; }
-    const p = a[lo], q = a[Math.min(lo + 1, a.length - 1)];
-    const k = q[0] === p[0] ? 0 : Math.min(1, Math.max(0, (ft - p[0]) / (q[0] - p[0])));
-    return [p[1] + (q[1] - p[1]) * k, p[2] + (q[2] - p[2]) * k];
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    if (bg) ctx.drawImage(bg, 0, 0, W, H);
-    const ft = fileT();
-    ctx.font = '600 10px Inter, sans-serif'; ctx.textBaseline = 'middle';
-    // 추적 중인 드라이버를 마지막에 그려 위에 오게 한다
-    for (const c of [...codes.filter((x) => x !== tracked), ...(tracked ? [tracked] : [])]) {
-      const d = byCode.get(c), [x, y] = at(c, ft), isT = c === tracked;
-      ctx.beginPath(); ctx.arc(tx(x), ty(y), isT ? 8 : 5.5, 0, Math.PI * 2);
-      ctx.fillStyle = teamColor(d.teamId, d.color); ctx.fill();
-      if (isT) { ctx.lineWidth = 2.5; ctx.strokeStyle = css('--text') || '#fff'; ctx.stroke(); }
-      if (isT || !tracked) { ctx.fillStyle = css('--text') || '#fff'; ctx.fillText(c, tx(x) + 9, ty(y)); }
-    }
-  }
+  const draw = () => map.draw(t + meta.offsetMs, tracked);
 
   // ---- 컨트롤·순위 패널 ----
   const playBtn = h('button', { class: 'btn', onclick: () => toggle() }, '▶ 재생');
@@ -164,11 +104,7 @@ function build(meta, pos) {
     raf = requestAnimationFrame(frame);
   }
 
-  const onResize = () => { layout(); draw(); };
-  window.addEventListener('resize', onResize);
-  const themeWatch = new MutationObserver(onResize);
-  themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  stop = () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); themeWatch.disconnect(); };
+  stop = () => { cancelAnimationFrame(raf); map.destroy(); };
 
   const root = h('div', { class: 'stack' },
     h('div', { class: 'filters' }, pill, playBtn, speedTabs, h('span', null, '랩 ', lapLabel, ` / ${meta.totalLaps}`), clockEl, trackSel),
@@ -177,7 +113,7 @@ function build(meta, pos) {
     h('section', null, h('div', { class: 'section-title' }, h('h2', null, '이벤트 타임라인'),
       h('span', { class: 'muted' }, Object.values(MARK).map(([, l]) => l).join(' · '))), timeline));
   // 캔버스는 DOM에 붙은 뒤에야 폭을 알 수 있다.
-  queueMicrotask(() => { layout(); panel(); draw(); });
+  queueMicrotask(() => { map.layout(); panel(); });
   return root;
 }
 

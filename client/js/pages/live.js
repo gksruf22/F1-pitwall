@@ -4,6 +4,7 @@ import { api, urlParam, setUrlParams } from '../api.js';
 import { mountLayout } from '../layout.js';
 import { table, tabs, colorBar, emptyState, errorState, skeleton } from '../ui.js';
 import { teamColor } from '../teams.js';
+import { trackMap } from '../trackmap.js';
 import { lapTime } from '../format.js';
 
 mountLayout('schedule');
@@ -47,7 +48,7 @@ const columns = [
 const head = h('div', { class: 'page-head' });
 const body = h('div', { class: 'stack' });
 app.append(head, body);
-let source = null;
+let source = null, stopMap = null;
 
 function start(race, races) {
   const select = h('select', { 'aria-label': '레이스 선택' }, races.map((r) => h('option', { value: r.id, selected: r.id === race.id }, `R${r.round} ${r.name}`)));
@@ -61,7 +62,32 @@ function start(race, races) {
   const feed = h('ul', { class: 'feed', 'aria-live': 'polite' });
   const bar = h('div', { class: 'filters' }, pill, h('span', null, '랩 ', lapEl), clockEl,
     tabs(SPEEDS.map((s) => ({ key: s, label: `${s}×` })), speed, (s) => setUrlParams({ speed: s })));
-  mount(body, bar, h('div', { class: 'live-grid' }, tbody, h('section', null, h('div', { class: 'section-title' }, h('h2', null, '이벤트')), feed)));
+  const mapBox = h('section', { hidden: true });
+  mount(body, bar, h('div', { class: 'live-grid' }, tbody, h('div', { class: 'stack' }, mapBox,
+    h('section', null, h('div', { class: 'section-title' }, h('h2', null, '이벤트')), feed))));
+
+  // 트랙맵: 위치 파일(리플레이와 같은 데이터)을 받아 서버 시각 t에 맞춰 그린다. 실패해도 순위표는 계속 동작한다.
+  // 틱은 1초마다 오고 배속이 높으면 한 번에 수십 초를 건너뛰므로, 틱 사이는 같은 배속으로 시각을 보간한다.
+  stopMap?.();
+  let tickT = 0, tickAt = performance.now(), raf = 0, stopped = false, map = null, offsetMs = 0;
+  stopMap = () => { stopped = true; cancelAnimationFrame(raf); map?.destroy(); };
+  (async () => {
+    try {
+      const meta = await api(`/races/${race.id}/replay`);
+      const res = await fetch(`/data/replay/${meta.sessionId}.json`);
+      if (!res.ok || stopped) return;
+      map = trackMap(await res.json(), meta.drivers, { labels: false, dot: 4 });
+      offsetMs = meta.offsetMs;
+      mapBox.append(h('div', { class: 'section-title' }, h('h2', null, '트랙')), map.canvas);
+      mapBox.hidden = false;
+      map.layout();
+      const loop = () => {
+        map.draw(tickT + Math.min((performance.now() - tickAt) * speed, speed * 1000) + offsetMs);
+        raf = requestAnimationFrame(loop);
+      };
+      loop();
+    } catch { /* 트랙맵 없이 진행 */ }
+  })();
 
   source?.close();
   source = new EventSource(`/api/races/${race.id}/stream?speed=${speed}`);
@@ -71,6 +97,7 @@ function start(race, races) {
     const d = JSON.parse(e.data);
     const [label, kind] = STATE[d.state] ?? [d.state, ''];
     pill.textContent = label; pill.className = `pill ${kind}`;
+    tickT = d.t; tickAt = performance.now();
     lapEl.textContent = d.lap; clockEl.textContent = clock(d.t);
     mount(tbody, table(columns, d.board));
   });
@@ -79,7 +106,7 @@ function start(race, races) {
     feed.prepend(h('li', null, h('span', { class: 'muted num' }, `${ev.lap ? `${ev.lap}랩` : ''} `), eventText(ev)));
     while (feed.children.length > 40) feed.lastChild.remove();
   });
-  source.addEventListener('end', () => { ended = true; source.close(); });
+  source.addEventListener('end', () => { ended = true; source.close(); setTimeout(() => cancelAnimationFrame(raf), 1500); });
   source.onerror = () => {
     if (ended) return;
     source.close(); // 자동 재연결하면 처음부터 다시 시작하므로 직접 다시 시도하게 한다.
