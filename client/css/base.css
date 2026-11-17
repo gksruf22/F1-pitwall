@@ -192,3 +192,8 @@ a.pcard:hover { border-color: var(--muted); border-top-color: var(--c, var(--mut
 .chips button { cursor: pointer; background: none; color: var(--muted); }
 .chips button[aria-pressed='true'] { color: var(--text); border-color: var(--accent); }
 .toggle { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; color: var(--muted); }
+
+/* 필터 바(레이스 페이스 등): 토글·슬라이더를 한 줄에 */
+.filters { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
+.filters input[type=range] { accent-color: var(--accent); }
+.row-gap { display: flex; gap: 8px; align-items: center; }

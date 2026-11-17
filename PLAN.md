@@ -275,7 +275,8 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 - [x] 대시보드 최단 피트스톱 카드 — 시즌 전체 **피트레인 통과 시간** 기준으로 표기(정지 시간은 수집 3건뿐이라 3주차 피트스톱 탭에서) (11.16)
 
 ### 3주차 (11.30~12.6) — 3등급
-- [ ] 레이스 페이스(시즌 전체 레이스 가능)·피트스톱 통계 탭, 헤드투헤드 예선 격차(Jolpica) — 2주차 데이터 위에서
+- [x] 레이스 페이스 탭 — `GET /api/races/:id/pace?clean=&cutoff=`(클린랩=1랩·인랩·아웃랩 제외+최속 랩 대비 cutoff% 초과 제외, 기본 107%), 화면 `/strategy.html?race=`(최속 랩 Top 20·Race Pace 박스플롯·Lap Times 스웜·Race Pace Evolution·Position Evolution·Gap to Leader). 패스티스트랩이 결과표와 일치함을 확인. 스피드트랩 히트맵은 수집 3건 탭에서. 선 차트(`chart-line.js`)는 format·auto·invert·결측 끊김 옵션으로 일반화 (11.17)
+- [ ] 피트스톱 통계 탭(같은 `/strategy.html`에 탭 추가), 헤드투헤드 예선 격차(Jolpica) — 2주차 데이터 위에서
 - [ ] 라이브(SSE) → 리플레이(Canvas, 수집 3건) → 스틴트·스피드트랩 탭(수집 3건)
 - [ ] 레이스 서브내비 공통 컴포넌트
 - [ ] 5등급(Track DNA 직접 정리 데이터, 언더컷/오버컷) — 일정이 남을 때만
