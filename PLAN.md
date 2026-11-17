@@ -122,7 +122,7 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 | | `GET /api/summary`, `/api/highlights?filter=`, `/api/news`, `/api/search?q=` | 대시보드·검색 |
 | 분석 | `GET /api/analysis/consistency?season=&excludeDnf=` | 순위 분포 |
 | | `GET /api/analysis/h2h?a=&b=&season=` , `/api/analysis/driver-stats/:id?season=` | 비교·스탯 |
-| | `GET /api/races/:id/strategy`, `/pace?clean=&cutoff=`, `/pitstops` | 수집 레이스 분석 |
+| | `GET /api/races/:id/strategy`, `/pace?clean=&cutoff=`, `GET /api/pitstops?season=` | 수집 레이스 분석 |
 | | `GET /api/circuits/dna` | Track DNA (게이트 후) |
 | 실시간 | `GET /api/races/:id/stream?speed=` (SSE), `/api/races/:id/events`, `/data/replay/:id.json` | 라이브·리플레이 |
 | AI | `POST /api/ai/chat`, `POST /api/ai/report` | 서버에서만 LLM 호출 |
@@ -276,7 +276,8 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 
 ### 3주차 (11.30~12.6) — 3등급
 - [x] 레이스 페이스 탭 — `GET /api/races/:id/pace?clean=&cutoff=`(클린랩=1랩·인랩·아웃랩 제외+최속 랩 대비 cutoff% 초과 제외, 기본 107%), 화면 `/strategy.html?race=`(최속 랩 Top 20·Race Pace 박스플롯·Lap Times 스웜·Race Pace Evolution·Position Evolution·Gap to Leader). 패스티스트랩이 결과표와 일치함을 확인. 스피드트랩 히트맵은 수집 3건 탭에서. 선 차트(`chart-line.js`)는 format·auto·invert·결측 끊김 옵션으로 일반화 (11.17)
-- [ ] 피트스톱 통계 탭(같은 `/strategy.html`에 탭 추가), 헤드투헤드 예선 격차(Jolpica) — 2주차 데이터 위에서
+- [x] 피트스톱 통계 탭 — `GET /api/pitstops?season=`(시즌 단위; 통과 시간 `lane_ms`, 90초 초과·레이스 중앙값 1.5배 초과 제외, 팀·드라이버 비교는 서킷 영향을 줄이려 **레이스 중앙값 대비**), 화면 `/strategy.html?tab=pit`(카드 6·최단 Top 20·팀 박스플롯·그랑프리별 평균(범례로 팀 분해)·컨스트럭터/드라이버 평균 막대·정지 시간 표(수집 3건, OpenF1)). 경로는 계획의 `/races/:id/pitstops` 대신 시즌 단위 `/api/pitstops` (11.17)
+- [ ] 헤드투헤드 예선 격차(Jolpica) — 2주차 데이터 위에서
 - [ ] 라이브(SSE) → 리플레이(Canvas, 수집 3건) → 스틴트·스피드트랩 탭(수집 3건)
 - [ ] 레이스 서브내비 공통 컴포넌트
 - [ ] 5등급(Track DNA 직접 정리 데이터, 언더컷/오버컷) — 일정이 남을 때만

@@ -1,8 +1,9 @@
-// 레이스 분석(/strategy.html?race=): 현재는 레이스 페이스 탭. 스틴트·피트스톱 탭은 같은 페이지에 이어 붙인다.
+// 레이스 분석(/strategy.html?tab=pace|pit): 레이스 페이스(레이스 단위)·피트스톱 통계(시즌 단위). 스틴트 탭은 같은 페이지에 이어 붙인다.
 import { h, mount } from '../dom.js';
 import { api, urlParam, setUrlParams } from '../api.js';
 import { mountLayout } from '../layout.js';
-import { load, table, colorBar, emptyState, errorState, skeleton } from '../ui.js';
+import { load, table, tabs, colorBar, emptyState, errorState, skeleton } from '../ui.js';
+import { barChart } from '../charts/bar.js';
 import { boxPlot } from '../charts/box.js';
 import { stripPlot } from '../charts/strip.js';
 import { lineChart } from '../chart-line.js';
@@ -13,10 +14,15 @@ mountLayout('schedule');
 const app = document.getElementById('app');
 const head = h('div', { class: 'page-head' });
 const body = h('div', { class: 'stack' });
-app.append(head, body);
+const tab = urlParam('tab') === 'pit' ? 'pit' : 'pace';
+const tabBar = tabs([{ key: 'pace', label: '레이스 페이스' }, { key: 'pit', label: '피트스톱' }], tab,
+  (k) => setUrlParams({ tab: k === 'pace' ? null : k }));
+app.append(head, tabBar, body);
 
 const block = (title, node, note) => h('section', null, h('div', { class: 'section-title' }, h('h2', null, title), note && h('span', { class: 'muted' }, note)), node);
 const sec = (ms) => `${(ms / 1000).toFixed(1)}초`;
+const signed = (ms, d = 1) => `${ms >= 0 ? '+' : '−'}${Math.abs(ms / 1000).toFixed(d)}초`;
+const stat = (label, value, note) => h('div', { class: 'card' }, h('div', { class: 'label' }, label), h('div', { class: 'big num' }, value), note && h('div', { class: 'muted' }, note));
 
 function paceView(d) {
   if (!d.drivers.length) return emptyState('이 레이스의 랩 데이터가 없습니다.');
@@ -46,7 +52,58 @@ function paceView(d) {
   ];
 }
 
+// 피트스톱 통계(시즌). 값은 Jolpica의 피트레인 "통과 시간"(정지 시간 아님). 팀·드라이버 비교는 레이스 중앙값 대비.
+function pitView(d) {
+  const c = d.cards;
+  if (!c.total) return emptyState('이 시즌의 피트스톱 데이터가 없습니다.');
+  const color = (x) => teamColor(x.teamId ?? x.id, x.color);
+  const who = (r) => h('div', { class: 'who' }, colorBar(color(r)), h('b', null, r.driverName ?? r.name));
+  const teamSeries = d.teams.map((t) => ({ id: t.id, label: t.name, color: color(t), values: d.rounds.map((r) => r.teams[t.id] ?? null) }));
+  const slowest = (list) => Math.min(...list.map((x) => x.avgDelta));
+  const bars = (list, label) => list.map((x) => ({ label: label(x), value: x.avgDelta - slowest(list), color: color(x) }));
+  const plus = (v) => `+${(v / 1000).toFixed(2)}초`;
+
+  const topTable = table([
+    { label: '#', render: (r) => r.rank },
+    { label: '드라이버', render: who },
+    { label: '팀', render: (r) => r.teamName ?? '–', class: 'muted' },
+    { label: '레이스', render: (r) => `R${r.round} ${r.raceName}`, class: 'muted' },
+    { label: '랩', align: 'right', render: (r) => r.lap },
+    { label: '통과 시간', align: 'right', render: (r) => h('span', { class: r.rank === 1 ? 'best' : '' }, `${(r.laneMs / 1000).toFixed(3)}초`) },
+  ], d.top.map((r, i) => ({ ...r, rank: i + 1 })));
+
+  const stopTable = d.stopTimes.length && table([
+    { label: '#', render: (r) => r.rank },
+    { label: '드라이버', render: who },
+    { label: '팀', render: (r) => r.teamName ?? '–', class: 'muted' },
+    { label: '레이스', render: (r) => r.raceName, class: 'muted' },
+    { label: '랩', align: 'right', render: (r) => r.lap },
+    { label: '정지 시간', align: 'right', render: (r) => h('span', { class: r.rank === 1 ? 'best' : '' }, `${(r.stopMs / 1000).toFixed(2)}초`) },
+  ], d.stopTimes.map((r, i) => ({ ...r, rank: i + 1 })));
+
+  return [
+    h('p', { class: 'muted' }, `Jolpica 피트레인 통과 시간 기준(타이어 교체 정지 시간이 아님). 90초 초과·레이스 중앙값의 1.5배 초과 ${c.excluded}건(적색기·페널티 등)은 통계에서 뺐습니다.`),
+    h('div', { class: 'cards' },
+      stat('총 피트스톱', String(c.total), `${c.races}개 레이스`),
+      stat('평균 통과 시간', sec(c.avgLaneMs), '이상치 제외'),
+      stat('중앙값', sec(c.medianLaneMs)),
+      stat('최단 통과 시간', c.fastest ? sec(c.fastest.laneMs) : '–', c.fastest && `${c.fastest.code ?? c.fastest.driverName} · R${c.fastest.round}`),
+      stat('레이스당 평균', c.perRace.toFixed(1), '회'),
+      stat('가장 빠른 팀', c.bestTeam?.name ?? '–', c.bestTeam && `중앙값 대비 ${signed(c.bestTeam.avgDelta, 2)}`)),
+    block('최단 피트스톱 Top 20', topTable, '통과 시간'),
+    block('팀별 일관성', boxPlot({ groups: d.teams.map((t) => ({ label: t.name, color: color(t), values: t.deltas })), format: (v) => signed(v), title: '팀별 피트스톱 일관성 박스플롯' }), '레이스 중앙값 대비 · 왼쪽일수록 빠름'),
+    block('그랑프리별 평균', lineChart({ series: [{ id: 'all', label: '전체 평균', color: 'var(--text)', dashed: true, values: d.rounds.map((r) => r.avgLaneMs) }, ...teamSeries], xLabels: d.rounds.map((r) => `R${r.round}`), visible: ['all'], format: sec, title: '그랑프리별 평균 통과 시간 선 차트', auto: true, asc: true, left: 60 }), '범례에서 팀을 켜서 비교합니다 · 서킷마다 피트레인 길이가 달라 값이 다릅니다'),
+    block('컨스트럭터별 평균', barChart({ items: bars(d.teams, (x) => x.name), format: plus, title: '컨스트럭터별 평균 피트스톱' }), '가장 빠른 팀 대비 · 레이스 중앙값 기준'),
+    block('드라이버별 평균', barChart({ items: bars(d.drivers, (x) => x.code ?? x.name), format: plus, title: '드라이버별 평균 피트스톱' }), '가장 빠른 드라이버 대비 · 5회 이상'),
+    stopTable ? block('정지 시간 (수집 3개 레이스)', stopTable, `OpenF1 정지 시간 · ${d.stopRaces.join(', ')}`) : null,
+  ];
+}
+
 async function init() {
+  if (tab === 'pit') {
+    mount(head, h('div', null, h('h1', null, '피트스톱 통계'), h('div', { class: 'sub' }, `${urlParam('season') ?? '최신'} 시즌 전체`)));
+    return load(body, () => api('/pitstops', { season: urlParam('season') }), pitView);
+  }
   mount(body, skeleton());
   try {
     const { races } = await api('/races', { season: urlParam('season') });
