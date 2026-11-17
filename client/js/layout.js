@@ -95,12 +95,13 @@ export function raceTabs(active, race) {
     h('a', { href: to, 'aria-current': key === active ? 'page' : null }, label)));
 }
 
-// 분석 페이지 공통 탭 (일관성 · 드라이버 비교)
+// 분석 페이지 공통 탭 (일관성 · 드라이버 비교 · 언더컷/오버컷)
 export function analysisTabs(active) {
   const season = urlParam('season');
   const q = season ? `?season=${encodeURIComponent(season)}` : '';
   return h('nav', { class: 'tabs', 'aria-label': '분석' }, [
     ['consistency', '/consistency.html', '일관성'],
     ['h2h', '/h2h.html', '드라이버 비교'],
+    ['undercut', '/undercut.html', '언더컷/오버컷'],
   ].map(([key, href, label]) => h('a', { href: href + q, 'aria-current': key === active ? 'page' : null }, label)));
 }

@@ -1,4 +1,4 @@
-// 레이스·피트 분석 API: /api/races/:id/pace, /api/races/:id/strategy(수집 3건), /api/pitstops (Jolpica 랩별 시간·포지션·피트레인 통과 시간으로 시즌 전체 가능)
+// 레이스·피트 분석 API: /api/races/:id/pace, /api/races/:id/strategy(수집 3건), /api/pitstops, /api/undercut (Jolpica 랩별 시간·포지션·피트레인 통과 시간으로 시즌 전체 가능)
 import { Router } from 'express';
 import { query } from '../db.js';
 import { cached } from '../cache.js';
@@ -168,6 +168,84 @@ router.get('/races/:id/strategy', async (req, res) => {
     };
   });
   if (!data) throw new HttpError(404, 'NOT_FOUND', '스틴트·스피드트랩 데이터가 수집된 레이스가 아닙니다.');
+  res.json(data);
+});
+
+// 언더컷/오버컷(시즌). 한 차(X)가 랩 p에 먼저 정지했고, 직전 랩(p-1) 끝에 3초 이내로 바로 앞·뒤에 있던 차(Y)가
+// 이어서 1~5랩 안에 정지했다면 한 쌍으로 본다. 두 차가 모두 정지를 마친 뒤(Y의 정지 랩 + 2) 순서로 성공을 판정한다.
+//  - Y가 앞차: X가 뒤에서 먼저 들어간 것(언더컷). 이후 X가 앞이면 UNDERCUT, 아니면 UNDERCUT_FAILED
+//  - Y가 뒤차: X가 앞에서 먼저 들어간 것. 이후 Y가 앞이면 OVERCUT(Y가 더 버텨 추월), 아니면 DEFENDED
+// 한계: 세이프티카·적기 구간과 정지 순서를 정할 수 없는 같은 랩 정지는 가려내지 않는다(같은 랩 정지는 제외).
+const WINDOW_LAPS = 5, GAP_MS = 3000;
+
+router.get('/undercut', async (req, res) => {
+  const season = await seasonParam(req.query.season);
+  const data = await cached(`undercut:${season}`, TTL, async () => {
+    const [{ rows: laps }, { rows: pits }, { rows: info }] = await Promise.all([
+      query(`SELECT l.session_id AS sid, l.driver_id AS d, l.lap, l.time_ms AS ms, l.position AS pos
+               FROM lap l JOIN session s ON s.id = l.session_id JOIN race ra ON ra.id = s.race_id WHERE ra.season = $1 AND s.type = 'R'`, [season]),
+      query(`SELECT p.session_id AS sid, p.driver_id AS d, p.lap FROM pit_stop p JOIN session s ON s.id = p.session_id
+               JOIN race ra ON ra.id = s.race_id WHERE ra.season = $1 AND s.type = 'R' ORDER BY p.lap`, [season]),
+      query(`SELECT s.id AS sid, ra.round, ra.name AS "raceName", r.driver_id AS d, dr.code, t.id AS "teamId", t.name AS "teamName", t.color
+               FROM result r JOIN session s ON s.id = r.session_id JOIN race ra ON ra.id = s.race_id
+               JOIN driver dr ON dr.id = r.driver_id LEFT JOIN team t ON t.id = r.team_id WHERE ra.season = $1 AND s.type = 'R'`, [season]),
+    ]);
+    const who = new Map(info.map((r) => [`${r.sid}:${r.d}`, r]));
+    const events = [];
+    const pitsBy = Map.groupBy(pits, (p) => p.sid);
+    for (const [sid, ls] of Map.groupBy(laps, (l) => l.sid)) {
+      const pos = new Map(), cum = new Map(); // `${driver}:${lap}` → 값
+      for (const [d, mine] of Map.groupBy(ls, (l) => l.d)) {
+        let sum = 0, ok = true;
+        for (const l of mine.sort((a, b) => a.lap - b.lap)) {
+          pos.set(`${d}:${l.lap}`, l.pos);
+          if (l.ms == null) ok = false;
+          if (ok) { sum += l.ms; cum.set(`${d}:${l.lap}`, sum); }
+        }
+      }
+      const atLap = new Map(); // `${lap}:${position}` → driver
+      for (const [k, v] of pos) { const i = k.lastIndexOf(':'); atLap.set(`${k.slice(i + 1)}:${v}`, k.slice(0, i)); }
+      const stops = pitsBy.get(sid) ?? [];
+      for (const x of stops) {
+        const myPos = pos.get(`${x.d}:${x.lap - 1}`);
+        if (!myPos) continue;
+        for (const dir of [-1, 1]) { // -1: 바로 앞차, +1: 바로 뒤차
+          const y = atLap.get(`${x.lap - 1}:${myPos + dir}`);
+          if (!y) continue;
+          const gap = Math.abs((cum.get(`${x.d}:${x.lap - 1}`) ?? NaN) - (cum.get(`${y}:${x.lap - 1}`) ?? NaN));
+          if (!(gap <= GAP_MS)) continue;
+          const ys = stops.find((s) => s.d === y && s.lap > x.lap && s.lap <= x.lap + WINDOW_LAPS);
+          if (!ys) continue;
+          const after = ys.lap + 2, px = pos.get(`${x.d}:${after}`), py = pos.get(`${y}:${after}`);
+          if (px == null || py == null) continue;
+          const xAhead = px < py;
+          const type = dir === -1 ? (xAhead ? 'UNDERCUT' : 'UNDERCUT_FAILED') : (xAhead ? 'DEFENDED' : 'OVERCUT');
+          const first = who.get(`${sid}:${x.d}`), second = who.get(`${sid}:${y}`);
+          if (!first || !second) continue;
+          events.push({ round: first.round, raceName: first.raceName, lap: x.lap, type, gapMs: gap,
+            first: { code: first.code, teamId: first.teamId, teamName: first.teamName, color: first.color },
+            second: { code: second.code, teamId: second.teamId, teamName: second.teamName, color: second.color } });
+        }
+      }
+    }
+    const count = (ty) => events.filter((e) => e.type === ty).length;
+    const teamMap = new Map();
+    const bump = (who, key) => {
+      if (!who.teamId) return;
+      if (!teamMap.has(who.teamId)) teamMap.set(who.teamId, { id: who.teamId, name: who.teamName, color: who.color, undercut: 0, undercutOk: 0, overcut: 0, overcutOk: 0 });
+      teamMap.get(who.teamId)[key]++;
+    };
+    for (const e of events) {
+      if (e.type === 'UNDERCUT' || e.type === 'UNDERCUT_FAILED') { bump(e.first, 'undercut'); if (e.type === 'UNDERCUT') bump(e.first, 'undercutOk'); }
+      else { bump(e.second, 'overcut'); if (e.type === 'OVERCUT') bump(e.second, 'overcutOk'); } // 뒤차가 버틴 쪽이 오버컷 시도
+    }
+    return {
+      season, window: WINDOW_LAPS, gapMs: GAP_MS,
+      totals: { undercut: count('UNDERCUT') + count('UNDERCUT_FAILED'), undercutOk: count('UNDERCUT'), overcut: count('OVERCUT') + count('DEFENDED'), overcutOk: count('OVERCUT') },
+      teams: [...teamMap.values()].sort((a, b) => b.undercutOk - a.undercutOk),
+      events: events.sort((a, b) => b.round - a.round || b.lap - a.lap).slice(0, 60),
+    };
+  });
   res.json(data);
 });
 
