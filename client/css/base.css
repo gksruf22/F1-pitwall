@@ -208,3 +208,16 @@ a.pcard:hover { border-color: var(--muted); border-top-color: var(--c, var(--mut
 .tyre { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 3px solid; border-radius: 50%; font-size: 11px; font-weight: 900; }
 .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 640px; overflow: auto; }
 .feed li { padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; }
+
+/* 리플레이 */
+.replay-grid { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .replay-grid { grid-template-columns: 1fr; } }
+canvas.track { width: 100%; display: block; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.order { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.order button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 8px; cursor: pointer; border-radius: 4px; font-weight: 700; font-size: 13px; }
+.order button:hover, .order li.on button { background: var(--surface); outline: 1px solid var(--border); }
+.order .num { width: 20px; color: var(--muted); }
+.order i { width: 4px; height: 14px; border-radius: 2px; }
+.timeline { position: relative; height: 32px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.timeline .mark { position: absolute; top: 6px; width: 6px; height: 20px; padding: 0; border: 0; border-radius: 2px; cursor: pointer; transform: translateX(-3px); }
+.timeline .cursor { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); pointer-events: none; }

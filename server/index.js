@@ -37,6 +37,8 @@ app.use('/api', (req, res) => {
   res.status(404).json({ error: { code: 'NOT_FOUND', message: '존재하지 않는 API입니다.' } });
 });
 
+// 리플레이 위치 샘플(대용량 JSON)은 DB가 아니라 파일로 정적 서빙한다.
+app.use('/data/replay', express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), '../data/replay')));
 app.use(express.static(clientDir));
 
 // 처리하지 못한 오류는 여기서 한 번에 응답한다(상세 내용은 로그에만 남긴다).

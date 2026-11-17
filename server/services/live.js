@@ -9,7 +9,7 @@ const median = (v) => { const s = [...v].sort((a, b) => a - b); return s[Math.fl
 export async function getTimeline(raceId) {
   return cached(`timeline:${raceId}`, 600_000, async () => {
     const { rows: [ses] } = await query(
-      `SELECT s.id, ra.name, ra.round FROM session s JOIN race ra ON ra.id = s.race_id
+      `SELECT s.id, s.start_utc AS "startUtc", ra.name, ra.round FROM session s JOIN race ra ON ra.id = s.race_id
         WHERE s.race_id = $1 AND s.type = 'R' AND s.openf1_key IS NOT NULL`, [raceId]);
     if (!ses) return null;
     const [{ rows: people }, { rows: laps }, { rows: stints }, { rows: events }] = await Promise.all([
@@ -46,7 +46,8 @@ export async function getTimeline(raceId) {
       .filter((e) => e.t >= 0).sort((a, b) => a.t - b.t); // seq가 시간순이 아닐 수 있다
     const totalLaps = Math.max(...drivers.map((d) => d.cum.length - 1));
     const endMs = Math.max(...drivers.map((d) => d.cum.at(-1)));
-    return { sessionId: ses.id, name: ses.name, round: ses.round, totalLaps, endMs, drivers, events: feed };
+    // offsetMs: 세션 시작(위치 파일의 0)부터 레이스 시작(타임라인의 0)까지
+    return { sessionId: ses.id, name: ses.name, round: ses.round, totalLaps, endMs, offsetMs: startMs - new Date(ses.startUtc).getTime(), drivers, events: feed };
   });
 }
 
