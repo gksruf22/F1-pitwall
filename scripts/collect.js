@@ -1,4 +1,5 @@
-// OpenF1 → DB·파일 (레이스 3건). 실행: npm run collect:openf1 [-- --round 9] [--skip-location]
+// OpenF1 → DB·파일. 실행: npm run collect:openf1 [-- --round 9] [--skip-location]
+// 인자가 없으면 결과가 있는 2026 레이스 중 위치 데이터가 있고 아직 수집하지 않은 레이스를 모두 순서대로 받는다.
 // 스틴트·섹터·스피드트랩·정지 시간·레이스 컨트롤 이벤트·순위 변경·위치(리플레이)·트랙 윤곽을 저장한다.
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -7,10 +8,17 @@ import { pool, query } from '../server/db.js';
 import { openf1 } from './lib/openf1.js';
 
 const { values } = parseArgs({ options: { round: { type: 'string' }, 'skip-location': { type: 'boolean' } } });
-// 위치 데이터가 있는 시연용 3건 (docs/data-gate.md): 실버스톤 R9, 몬자 R13, 멕시코시티 R19
-const RACES = [{ round: 9, key: 11326 }, { round: 13, key: 11361 }, { round: 19, key: 11404 }]
-  .filter((r) => !values.round || r.round === Number(values.round));
 const SEASON = 2026;
+// 레이스 목록: DB의 결승 시작일과 OpenF1 세션 날짜를 맞춰 session_key를 찾는다.
+async function findRaces() {
+  const sessions = await openf1('sessions', { year: SEASON, session_name: 'Race' });
+  const { rows } = await query(
+    `SELECT ra.round, s.start_utc, s.openf1_key FROM race ra JOIN session s ON s.race_id = ra.id AND s.type = 'R'
+      WHERE ra.season = $1 AND EXISTS (SELECT 1 FROM result r WHERE r.session_id = s.id) ORDER BY ra.round`, [SEASON]);
+  return rows.map((r) => ({ round: r.round, done: r.openf1_key != null,
+    key: sessions.find((x) => x.date_start.slice(0, 10) === r.start_utc.toISOString().slice(0, 10))?.session_key }))
+    .filter((r) => r.key && (!values.round || r.round === Number(values.round)));
+}
 const ms = (sec) => (sec == null ? null : Math.round(sec * 1000));
 const REPLAY_DIR = fileURLToPath(new URL('../data/replay/', import.meta.url));
 
@@ -20,14 +28,22 @@ async function collectRace({ round, key }) {
     `SELECT s.id FROM session s JOIN race ra ON ra.id = s.race_id WHERE ra.season = $1 AND ra.round = $2 AND s.type = 'R'`, [SEASON, round]);
   if (!sess) throw new Error(`R${round} 세션이 DB에 없습니다. 먼저 npm run collect 를 실행하세요.`);
   const sid = sess.id;
-  await query('UPDATE session SET openf1_key = $1 WHERE id = $2', [key, sid]);
-
   const [info] = await openf1('sessions', { session_key: key });
   const { rows: drv } = await query('SELECT id, code FROM driver');
   const byCode = new Map(drv.map((d) => [d.code, d.id]));
   const nums = new Map((await openf1('drivers', { session_key: key })).map((d) => [d.driver_number, { id: byCode.get(d.name_acronym), code: d.name_acronym }]));
   const idOf = (n) => nums.get(n)?.id;
   console.log(`드라이버 ${[...nums.values()].filter((d) => d.id).length}/${nums.size} 매핑`);
+
+  // 위치 데이터가 없는 레이스(예: 모나코)는 리플레이가 불가능하므로 받지 않는다.
+  if (!values['skip-location']) {
+    const probeFrom = new Date(+new Date(info.date_start) + 20 * 60000).toISOString().slice(0, 19);
+    const probeTo = new Date(+new Date(info.date_start) + 22 * 60000).toISOString().slice(0, 19);
+    if (!(await openf1('location', { session_key: key, driver_number: 1 }, `&date%3E${probeFrom}&date%3C${probeTo}`)).length) {
+      console.log('위치 데이터가 없어 건너뜁니다.');
+      return;
+    }
+  }
 
   // 1) 스틴트
   const stints = (await openf1('stints', { session_key: key })).filter((s) => idOf(s.driver_number));
@@ -105,7 +121,8 @@ async function collectRace({ round, key }) {
   }
 
   // 6) 위치(리플레이): 드라이버별 10분 구간으로 받아 2초 간격으로 줄여 파일 1개로 저장
-  if (values['skip-location']) return;
+  const markDone = () => query('UPDATE session SET openf1_key = $1 WHERE id = $2', [key, sid]); // 끝까지 받은 뒤에만 표시한다
+  if (values['skip-location']) return markDone();
   const t0 = +start, t1 = +new Date(info.date_end), STEP = 10 * 60 * 1000;
   const out = { sessionId: sid, startUtc: info.date_start, intervalMs: 2000, drivers: {} };
   for (const [num, d] of nums) {
@@ -125,7 +142,16 @@ async function collectRace({ round, key }) {
   await mkdir(REPLAY_DIR, { recursive: true });
   await writeFile(`${REPLAY_DIR}${sid}.json`, JSON.stringify(out));
   console.log(`data/replay/${sid}.json 저장`);
+  await markDone();
 }
 
-for (const race of RACES) await collectRace(race);
+const races = await findRaces();
+for (const race of races) {
+  if (race.done && !values.round) { console.log(`R${race.round}: 이미 수집됨`); continue; }
+  try {
+    await collectRace(race);
+  } catch (e) { // 한 레이스가 실패해도 나머지는 계속 받는다. 받은 원본은 캐시되어 다음 실행에서 이어진다.
+    console.error(`R${race.round} 실패: ${e.message}`);
+  }
+}
 await pool.end();

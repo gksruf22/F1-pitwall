@@ -14,3 +14,4 @@ data/raw/
 
 # 제출용 계획서(개인정보 포함)
 보고서/
+data/collect-state.json

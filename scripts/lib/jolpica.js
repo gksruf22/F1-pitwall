@@ -1,5 +1,5 @@
 // Jolpica(Ergast 호환) 호출 모듈: 호출 간격 유지 + 재시도 + data/raw 원본 캐시.
-// 한도: 초당 4회·시간당 500회 안팎 → 호출 사이 400ms를 둔다. 캐시가 있으면 호출하지 않는다.
+// 한도: 초당 4회·시간당 500회 안팎 → 호출 사이 400ms를 둔다. 시간당 한도(429)에 걸리면 RateLimitError로 멈춘다. 캐시가 있으면 호출하지 않는다.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,24 +11,36 @@ const GAP_MS = 400;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let lastCall = 0;
 
+// 429: 순간 한도(초당 4회)는 몇 번 짧게 재시도하고, 계속되면 시간당 한도(500회 안팎)로 보고 RateLimitError를 던진다.
+// 호출하는 쪽은 여기서 멈추고 나중에 다시 실행한다(받은 데이터는 data/raw에 캐시되어 이어받기가 된다).
+export class RateLimitError extends Error {
+  rateLimited = true;
+}
+
 async function fetchJson(url, tries = 4) {
-  for (let i = 1; i <= tries; i++) {
+  let failures = 0, bursts = 0;
+  while (true) {
     const wait = lastCall + GAP_MS - Date.now();
     if (wait > 0) await sleep(wait);
     lastCall = Date.now();
     try {
       const res = await fetch(url);
       if (res.ok) return await res.json();
-      if (res.status !== 429 && res.status < 500) throw new Error(`HTTP ${res.status}`); // 재시도 무의미
-      const retryAfter = Number(res.headers.get('retry-after')) || 0;
-      console.warn(`  재시도 ${i}/${tries}: HTTP ${res.status} (retry-after ${retryAfter}s)`);
-      await sleep(Math.max(retryAfter * 1000, 2000 * i));
+      if (res.status === 429) {
+        if (++bursts > 3) throw new RateLimitError(`호출 한도(429): ${url}`);
+        console.warn(`  429 — ${bursts * 15}초 대기 후 재시도 ${bursts}/3`);
+        await sleep(bursts * 15_000);
+        continue;
+      }
+      if (res.status < 500) throw new Error(`HTTP ${res.status}`); // 재시도 무의미
+      throw new Error(`서버 오류 ${res.status}`);
     } catch (e) {
-      if (e.message.startsWith('HTTP ')) throw new Error(`${e.message} ${url}`);
-      await sleep(2000 * i); // 네트워크 오류는 재시도
+      if (e.rateLimited || e.message.startsWith('HTTP ')) throw e.rateLimited ? e : new Error(`${e.message} ${url}`);
+      if (++failures >= tries) throw new Error(`재시도 초과: ${url} (${e.message})`);
+      console.warn(`  재시도 ${failures}/${tries}: ${e.message}`);
+      await sleep(2000 * failures);
     }
   }
-  throw new Error(`재시도 초과: ${url}`);
 }
 
 /**

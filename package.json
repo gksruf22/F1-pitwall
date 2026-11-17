@@ -16,7 +16,8 @@
     "collect:colors": "node scripts/team-colors.js",
     "collect:laps": "node scripts/ingest-laps.js",
     "collect:news": "node server/services/news.js",
-    "collect:openf1": "node scripts/collect.js"
+    "collect:openf1": "node scripts/collect.js",
+    "collect:all": "node scripts/collect-all.js"
   },
   "dependencies": {
     "dotenv": "^18.0.10",

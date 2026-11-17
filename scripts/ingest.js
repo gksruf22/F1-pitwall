@@ -141,7 +141,7 @@ try {
   }
 } catch (e) {
   console.error('수집 실패:', e.message);
-  process.exitCode = 1;
+  process.exitCode = e.rateLimited ? 75 : 1; // 75 = 호출 한도(내일 이어서 실행)
 } finally {
   await pool.end();
 }
