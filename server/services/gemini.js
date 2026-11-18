@@ -3,7 +3,7 @@ import { HttpError } from '../http.js';
 
 const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-async function generate(body) {
+export async function generate(body) {
   const key = process.env.GEMINI_API_KEY;
   const model = process.env.AI_MODEL || 'gemini-flash-lite-latest';
   if (!key) throw new HttpError(503, 'AI_DISABLED', 'AI 기능이 설정되지 않았습니다.');
@@ -55,4 +55,22 @@ export async function chatWithTools({ system, contents, declarations, runTool, m
     }
     convo.push({ role: 'user', parts: responses });
   }
+}
+
+// 도구 없이 문장만 생성(리포트·하이라이트). 근거 데이터는 prompt에 넣어 준다.
+export async function generateText({ system, prompt, maxTokens = 800 }) {
+  const data = await generate({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.4 },
+  });
+  return (data.candidates?.[0]?.content?.parts ?? []).filter((p) => p.text && !p.thought).map((p) => p.text).join('').trim();
+}
+
+// 숫자 검증: text에 나왔지만 source(근거)에는 없는 숫자 목록. 비어 있지 않으면 AI가 숫자를 만든 것.
+// "1:24.864"·"2.6초"·"12,345"처럼 붙은 숫자도 쪼개서 비교한다.
+const numbers = (str) => new Set((str.replace(/(\d),(\d{3})/g, '$1$2').match(/\d+/g) ?? []).map(Number));
+export function unsupportedNumbers(text, source) {
+  const allowed = numbers(typeof source === 'string' ? source : JSON.stringify(source));
+  return [...numbers(text)].filter((n) => !allowed.has(n));
 }

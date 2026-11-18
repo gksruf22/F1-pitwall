@@ -5,6 +5,7 @@ import { mountLayout, sectionTabs, raceTabs } from '../layout.js';
 import { load, table, tabs, colorBar, emptyState, errorState, skeleton } from '../ui.js';
 import { teamColor } from '../teams.js';
 import { lapTime, points, SESSION_NAMES } from '../format.js';
+import { aiReportCard } from '../ai-report.js';
 
 mountLayout('schedule');
 const app = document.getElementById('app');
@@ -67,7 +68,7 @@ async function init() {
     const order = ['R', 'Q', 'S'].filter((t) => types.includes(t));
     const tabBar = tabs(order.map((t) => ({ key: t, label: SESSION_NAMES[t] })), type, (t) => setUrlParams({ session: t }));
     const content = h('div');
-    mount(body, tabBar, content);
+    mount(body, tabBar, content, ...(type === 'R' ? [aiReportCard(race.id)] : []));
     await load(content, () => api(`/races/${race.id}/results`, { session: type }), ({ results }) =>
       results.length ? table(type === 'Q' ? qualiColumns(results) : raceColumns, results) : emptyState('이 세션의 결과가 없습니다.'));
   } catch (err) {

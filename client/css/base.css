@@ -262,3 +262,9 @@ button.link { background: none; border: 0; color: var(--muted); cursor: pointer;
 .evidence-item { margin-top: 10px; display: grid; gap: 6px; }
 .evidence-item .table-wrap { max-height: 280px; overflow: auto; }
 .small { font-size: 0.85rem; }
+.ai-report { margin-top: 16px; }
+.ai-report p { margin: 0 0 10px; line-height: 1.7; }
+.facts-list { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 10px 0 0; font-size: 0.9rem; }
+.facts-list dt { color: var(--muted); }
+.facts-list dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .facts-list { grid-template-columns: 1fr; } .facts-list dd { margin-bottom: 6px; } }
