@@ -19,12 +19,15 @@ import favorites from './routes/favorites.js';
 import fantasy from './routes/fantasy.js';
 import notifications from './routes/notifications.js';
 import posts from './routes/posts.js';
+import ai from './routes/ai.js';
 import { scheduleNotifications } from './services/notifications.js';
 import { scheduleNews } from './services/news.js';
 
 const app = express();
 const clientDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../client');
 
+// Render는 프록시 1단 뒤에서 동작한다: req.ip를 실제 접속 주소로(로그인·AI 한도에 사용)
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use('/api/health', health);
 app.use('/api/auth', auth);
@@ -32,6 +35,7 @@ app.use('/api/favorites', favorites);
 app.use('/api/fantasy', fantasy);
 app.use('/api/notifications', notifications);
 app.use('/api/posts', posts);
+app.use('/api/ai', ai);
 app.use('/api/standings', standings);
 app.use('/api/summary', summary);
 app.use('/api', races); // /seasons, /races ...

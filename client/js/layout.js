@@ -8,6 +8,7 @@ const NAV = [
   { key: 'schedule', href: '/schedule.html', label: '일정·결과·순위' },
   { key: 'profiles', href: '/drivers.html', label: '드라이버·팀·서킷' },
   { key: 'analysis', href: '/consistency.html', label: '분석' },
+  { key: 'ai', href: '/ai.html', label: 'AI' },
   { key: 'fantasy', href: '/fantasy.html', label: 'Fantasy' },
   { key: 'news', href: '/news.html', label: '뉴스' },
   { key: 'board', href: '/board.html', label: '게시판' },

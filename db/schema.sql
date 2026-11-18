@@ -191,3 +191,18 @@ CREATE TABLE IF NOT EXISTS comment (
   created_utc timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS comment_post_idx ON comment (post_id, created_utc);
+
+-- AI 호출 횟수(하루 단위, KST 아닌 UTC 날짜). key = 'user:<id>' | 'ip:<주소>' | 'all'(서버 전체)
+CREATE TABLE IF NOT EXISTS ai_usage (
+  key   text NOT NULL,
+  day   date NOT NULL,
+  count integer NOT NULL DEFAULT 0,
+  PRIMARY KEY (key, day)
+);
+
+-- 리포트·하이라이트 문장 캐시(같은 입력은 다시 생성하지 않는다)
+CREATE TABLE IF NOT EXISTS ai_cache (
+  key         text PRIMARY KEY,
+  text        text NOT NULL,
+  created_utc timestamptz NOT NULL DEFAULT now()
+);
