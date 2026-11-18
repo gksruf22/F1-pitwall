@@ -184,6 +184,11 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 - **벡터 RAG(임베딩 검색)는 쓰지 않는다.** 데이터가 결과·랩타임·피트스톱 같은 숫자 표라 유사도 검색으로는
   정확한 값을 보장할 수 없고, SQL 조회가 정확하다. 함수 호출로 DB를 조회해 답을 보강하는 방식이 이 프로젝트의
   검색 증강이다(완료보고서에 이유 명시). 모델 이름·요청/응답 형식·무료 한도는 구현 전에 실제 호출로 확인한다.
+- **실제 호출 확인(11.18):** `POST /v1beta/models/{model}:generateContent`, 헤더 `x-goog-api-key`,
+  `tools[].functionDeclarations`. 응답 `parts`에 `functionCall{name,args,id}`와 `thoughtSignature`가 오며, 다음 요청에
+  이 part를 **그대로** 되돌려 보내고 `functionResponse`를 붙여야 한다. 무료 키로 `gemini-flash-lite-latest`는 정상(약 4.6초),
+  `gemini-flash-latest`·`gemini-3.8-flash`는 그 시각 503(수요 과다), `gemini-2.5-flash`는 신규 사용자 404 →
+  기본 `AI_MODEL=gemini-flash-lite-latest`, 503이면 1회 재시도 후 "잠시 후 다시" 오류로 응답.
 - 무료 등급은 입력이 서비스 개선에 쓰일 수 있으므로 **사용자 게시글·댓글은 AI에 보내지 않는다.**
 - **하이라이트:** 서버가 규칙으로 사실(폴투윈, 연속 포디움, 그리드 대비 최다 상승, 팀 1-2 등)을 먼저 만들고
   AI는 문장만 다듬는다. **숫자는 AI가 만들지 않는다.**
