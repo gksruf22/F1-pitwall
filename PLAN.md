@@ -39,7 +39,7 @@ GitHub: https://github.com/gksruf22/F1-pitwall
 | **1 기반 정보** | 헤더 공통(내비·검색·시즌 선택기·테마), 통합 대시보드, 일정(KST), 그랑프리 결과, 드라이버·컨스트럭터 순위(리더 대비 격차·순위 변동), 포인트 추이 차트, 드라이버·팀·서킷 프로필, 시즌 아카이브 | Jolpica |
 | **2 시즌 전체 데이터 분석** | Driver Stats, 일관성(순위 분포), 헤드투헤드(예선·레이스 승수 + **팀메이트 예선 Q1/Q2/Q3 격차·팀 폴 격차**), **레이스 페이스(클린랩·107%·갭·포지션 변화)**, 하이라이트 피드, 뉴스, 통합 검색 | Jolpica(결과·예선 시간·**랩별 랩타임/포지션**) + RSS |
 | **3 수집 레이스 기반** | 라이브 타이밍(SSE 시뮬레이션), 리플레이(Canvas), 스틴트·전략, 스피드트랩, 피트스톱 **정지 시간** 통계, 스프린트 예선 순위 | OpenF1 (레이스 3건만 사전 수집) + Jolpica 피트레인 시간 |
-| **4 AI·참여** | AI 어시스턴트·리포트·하이라이트 문장, 로그인, Fantasy F1, 게시판, 즐겨찾기, 앱 내 알림 | 위 전부 + Claude API |
+| **4 AI·참여** | AI 어시스턴트·리포트·하이라이트 문장, 로그인, Fantasy F1, 게시판, 즐겨찾기, 앱 내 알림 | 위 전부 + Gemini API |
 | **5 조건부** | Track DNA(특성 점수·코너 비율·턴 수·랩 길이는 두 API 모두 없음 → 직접 정리 필요), 언더컷/오버컷 | 직접 정리한 `data/circuits.json` |
 | **공통(마지막)** | 업데이트 내역, 반응형·로딩/오류 점검 | — |
 
@@ -178,9 +178,13 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 
 ## 8. AI
 
-- Claude Messages API를 서버에서 `fetch`로 호출(SDK 없음). **Tool Use**로 자체 쿼리 함수
+- **Gemini API**(11.18 Claude에서 변경)를 서버에서 REST `fetch`로 호출(SDK 없음). **Function Calling**으로 자체 쿼리 함수
   (`get_race_results`, `get_standings`, `get_driver_laps`, `get_pit_stops`)를 호출해 DB 데이터로 답하고,
   답변에 **근거 데이터를 함께 표시**한다. "AI 생성 내용" 문구, 호출 횟수·입력 길이 제한(`ai_usage`).
+- **벡터 RAG(임베딩 검색)는 쓰지 않는다.** 데이터가 결과·랩타임·피트스톱 같은 숫자 표라 유사도 검색으로는
+  정확한 값을 보장할 수 없고, SQL 조회가 정확하다. 함수 호출로 DB를 조회해 답을 보강하는 방식이 이 프로젝트의
+  검색 증강이다(완료보고서에 이유 명시). 모델 이름·요청/응답 형식·무료 한도는 구현 전에 실제 호출로 확인한다.
+- 무료 등급은 입력이 서비스 개선에 쓰일 수 있으므로 **사용자 게시글·댓글은 AI에 보내지 않는다.**
 - **하이라이트:** 서버가 규칙으로 사실(폴투윈, 연속 포디움, 그리드 대비 최다 상승, 팀 1-2 등)을 먼저 만들고
   AI는 문장만 다듬는다. **숫자는 AI가 만들지 않는다.**
 - 레이스 요약 리포트는 `result`+`replay_event`를 근거로 생성한다.
@@ -242,7 +246,7 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 | 리포트 한도 | 레이스당 **1회만 생성 후 `ai_cache` 재사용**, 새로 생성은 로그인 사용자 5회/일 |
 | 전체 안전 상한 | 서버 전체 하루 200회 초과 시 "오늘 한도 초과" 응답(비용 보호) |
 | 입력 길이 | 질문 500자, 대화 이력은 최근 6턴만 전송 |
-| 출력·루프 | `max_tokens` 800, Tool Use 반복 최대 4회, 도구 1회당 반환 행 최대 50 |
+| 출력·루프 | 출력 토큰 800, 함수 호출 반복 최대 4회, 도구 1회당 반환 행 최대 50 |
 | 모델 | `.env`의 `AI_MODEL`로 지정(기본은 가벼운 모델, 리포트만 더 큰 모델로 바꿀 수 있게) |
 | 도구 | **읽기 전용 조회 함수만**(쓰기 도구 없음). 도구에서 데이터가 없으면 답변은 "데이터 없음"으로 응답하게 시스템 프롬프트에 명시 |
 | 근거 표시 | 응답과 함께 호출된 도구 이름·인자·반환 요약을 내려주어 화면의 "근거 데이터" 패널에 표시 |
@@ -289,7 +293,7 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 
 ### 4주차 (12.7~12.13) — 4등급
 - [ ] 세부 규칙(§8-1) 구현: 채점·알림 job·하이라이트·AI 한도
-- [ ] AI(Tool Use, 근거 표시, 사용량 제한) + `/ai` + 하이라이트 문장 다듬기 + 라이브 AI 질문 박스
+- [ ] AI(Gemini Function Calling, 근거 표시, 사용량 제한) + `/ai` + 하이라이트 문장 다듬기 + 라이브 AI 질문 박스
 - [x] **로그인(11.17)** — 의존성 없이 Node 내장 `crypto`로 구현(비밀번호 scrypt 해시, JWT HS256 7일, 서명·만료 검사). `app_user` 테이블, `POST /api/auth/register|login`, `GET /api/auth/me`, `requireAuth` 미들웨어(`req.userId`), 로그인 실패 10회/15분 제한(메모리). 화면 `/login.html`(로그인·가입 탭, `?next=` 복귀), 헤더에 닉네임·로그아웃, 토큰은 `localStorage`. `.env`에 `JWT_SECRET` 필요(`.env.example`에 키만 추가). 그래서 `bcrypt`·`jsonwebtoken` 승인은 필요 없어짐
 - [x] **즐겨찾기(11.18)** — `favorite(user_id, kind driver|team, ref_id)`(사용자 삭제 시 함께 삭제), `GET /api/favorites`·`PUT|DELETE /api/favorites/:kind/:id`(JWT, 본인 것만, 없는 대상 404). 화면: 드라이버·팀 상세의 ★ 토글(`favorite.js`, 비로그인이면 로그인으로 이동 후 복귀), `/favorites.html` 목록, 헤더에 링크. 대시보드 요약·`FAV_*` 알림은 알림 기능 때 연결
 - [x] **Fantasy 예측·자동 채점(11.18)** — 8-1 규칙 그대로: 1~3위 예측(서로 다른 3명, 그 시즌 엔트리만), 마감=예선 시작(없으면 결승 시작)을 **서버 시각**으로 검사, 마감 전 덮어쓰기, 채점 최대 12점. `fantasy_prediction` 테이블, `GET /api/fantasy/races`·`/races/:id/drivers`·`/me`·`/ranking`, `PUT /api/fantasy/predictions/:raceId`. 채점은 `scorePending()`이 결과가 들어온 레이스의 **미채점 예측만** 계산(여러 번 실행해도 안전)하며 별도 스케줄러 없이 `/me`·`/ranking` 호출 시 실행. 규칙 테스트 `npm test`(`server/services/fantasy.test.js`). 화면 `/fantasy.html`(예측 폼·내 예측·시즌 랭킹), 상단 내비에 Fantasy 추가. 값은 `server/config.js` 대신 서비스 파일 상수/SQL에 둠. R21(라스베이거스)은 실제 마감 전이라 실제 예측을 받을 수 있음
@@ -313,7 +317,7 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 - **코딩 규칙:** 의존성 추가는 먼저 이유를 설명하고 승인받는다. 식별자는 영어, 주석·UI 문구는 한국어. 파일 하나는
   하나의 책임, 공통 모듈을 먼저 만들고 재사용. 외부 데이터·사용자 입력은 `textContent`/이스케이프로만 DOM에 넣는다.
   비동기 요청에는 로딩·오류 상태를 항상 둔다.
-- **보안:** 비밀 값(DB, Claude 키, JWT 비밀)은 `.env`에만 두고 `.env.example`만 커밋. 게시글·댓글 수정/삭제는
+- **보안:** 비밀 값(DB, Gemini 키, JWT 비밀)은 `.env`에만 두고 `.env.example`만 커밋. 게시글·댓글 수정/삭제는
   작성자 본인만(JWT 미들웨어). 이미지 업로드는 만들지 않는다.
 - **저작권:** F1 공식 로고·사진·폰트 사용 금지, 직접 만든 디자인, 화면 하단에 **비공식 팬 프로젝트** 명시.
 

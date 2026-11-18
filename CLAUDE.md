@@ -35,7 +35,7 @@ GitHub: https://github.com/gksruf22/F1-pitwall
 - **데이터:** Jolpica F1(일정·결과·순위) + OpenF1(2023+ 과거 데이터, 실시간은 유료라 미사용)을 Node 스크립트로
   **사전 수집**해 저장. 호출 제한(OpenF1 초당 3회·분당 30회, Jolpica 익명 제한)을 지키는 대기·재시도를 넣는다.
   엔드포인트·필드는 구현 전에 실제 호출로 확인한다(추측 금지).
-- **AI:** Claude Messages API를 서버에서만 `fetch`로 호출, Tool Use로 자체 DB 조회, 근거 데이터 표시, "AI 생성
+- **AI:** Gemini API를 서버에서만 `fetch`로 호출, Function Calling으로 자체 DB 조회(벡터 RAG 안 씀), 근거 데이터 표시, "AI 생성
   내용" 문구, 호출 횟수·입력 길이 제한. 숫자는 AI가 만들지 않는다.
 - **배포:** Render(Express가 정적 파일도 서빙, SSE 때문에 서버리스 부적합). 시간은 UTC 저장 → 화면에서 KST 변환.
 - **범위 제외:** 충돌 피해 비용·파워유닛·기술 업데이트(무료 API에 없음), 팀 라디오, 관리자 UI, Web Push·PWA, 이미지 업로드.
@@ -50,7 +50,7 @@ GitHub: https://github.com/gksruf22/F1-pitwall
 
 ## 보안·저작권
 
-- 비밀 값(DB 접속정보, Claude API 키, JWT 비밀)은 코드·로그·커밋에 넣지 않는다. `.gitignore`를 먼저 설정하고 `.env`를 쓰며 `.env.example`만 커밋한다.
+- 비밀 값(DB 접속정보, Gemini API 키, JWT 비밀)은 코드·로그·커밋에 넣지 않는다. `.gitignore`를 먼저 설정하고 `.env`를 쓰며 `.env.example`만 커밋한다.
 - 게시글·댓글 수정/삭제는 작성자 본인만(JWT 미들웨어에서 검사).
 - F1 공식 로고·사진·폰트는 사용하지 않는다. 직접 만든 디자인을 쓰고, 화면 하단에 **비공식 팬 프로젝트**임을 명시한다.
 
