@@ -13,6 +13,9 @@ h2 { font-size: 18px; font-weight: 700; }
 .muted { color: var(--muted); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* display를 지정한 요소도 hidden 속성이면 숨긴다(알림 배지 0 등) */
+[hidden] { display: none !important; }
+
 /* 헤더 */
 .site-header {
   display: flex; align-items: center; gap: 24px; padding: 0 var(--gutter); min-height: 72px;
@@ -35,7 +38,7 @@ select, .btn {
 .btn { text-decoration: none; display: inline-block; white-space: nowrap; }
 .btn:hover, select:hover { border-color: var(--muted); }
 .btn.primary { border-color: var(--accent); }
-@media (max-width: 960px) {
+@media (max-width: 1600px) { /* 로그인 시 도구 영역이 넓어 내비가 잘리므로 내비를 한 줄 아래로 */
   .site-header { flex-wrap: wrap; min-height: 0; padding-top: 10px; padding-bottom: 6px; gap: 8px 12px; }
   .nav { order: 3; flex-basis: 100%; }
   .tools { margin-left: auto; }
@@ -225,8 +228,8 @@ canvas.track { width: 100%; display: block; background: var(--surface); border: 
 .auth-box { max-width: 420px; }
 .form { display: grid; gap: 14px; }
 .field { display: grid; gap: 6px; font-size: 14px; }
-.field input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font: inherit; }
-.field input:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+.field input, .field textarea { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font: inherit; }
+.field input:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
 .form-msg { color: var(--down, #e10600); min-height: 1.4em; margin: 0; font-size: 14px; }
 .auth-state { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; white-space: nowrap; }
 .auth-state b { max-width: 8em; overflow: hidden; text-overflow: ellipsis; }
@@ -236,3 +239,12 @@ canvas.track { width: 100%; display: block; background: var(--surface); border: 
 .notes li { cursor: pointer; }
 .notes li.read { color: var(--muted); }
 .notes li.unread { font-weight: 500; }
+
+/* 게시판 */
+.field textarea { resize: vertical; line-height: 1.6; }
+.post-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; margin: 0; }
+.feed.comments li { display: block; }
+.form > button { justify-self: start; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pager { display: flex; gap: 12px; align-items: center; justify-content: center; }
+button.link { background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; text-decoration: underline; margin-left: 8px; }

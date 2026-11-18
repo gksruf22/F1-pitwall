@@ -171,3 +171,23 @@ CREATE TABLE IF NOT EXISTS notification (
   UNIQUE (user_id, kind, ref_key)
 );
 CREATE INDEX IF NOT EXISTS notification_user_idx ON notification (user_id, created_utc DESC);
+
+-- 게시판: 텍스트만(이미지 업로드 없음). 수정·삭제는 작성자 본인만(라우터에서 user_id로 검사).
+CREATE TABLE IF NOT EXISTS post (
+  id          integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id     integer NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  title       text NOT NULL,
+  body        text NOT NULL,
+  created_utc timestamptz NOT NULL DEFAULT now(),
+  updated_utc timestamptz
+);
+CREATE INDEX IF NOT EXISTS post_created_idx ON post (created_utc DESC);
+
+CREATE TABLE IF NOT EXISTS comment (
+  id          integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  post_id     integer NOT NULL REFERENCES post(id) ON DELETE CASCADE,
+  user_id     integer NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  body        text NOT NULL,
+  created_utc timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS comment_post_idx ON comment (post_id, created_utc);

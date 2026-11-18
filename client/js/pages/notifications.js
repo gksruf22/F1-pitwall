@@ -12,7 +12,7 @@ const all = h('button', { class: 'btn', type: 'button' }, '모두 읽음');
 document.getElementById('app').append(
   h('div', { class: 'page-head' }, h('div', null, h('h1', null, '알림'), h('div', { class: 'sub' }, '즐겨찾기 결과·Fantasy 채점·다음 그랑프리 알림 (30초마다 새로 확인)')), all), body);
 
-const LABEL = { FAV_RESULT: '결과', FAV_POLE: '폴', RACE_SOON: '일정', FANTASY_SCORED: 'Fantasy' };
+const LABEL = { FAV_RESULT: '결과', FAV_POLE: '폴', RACE_SOON: '일정', FANTASY_SCORED: 'Fantasy', POST_COMMENT: '댓글' };
 
 function render() {
   load(body, () => send('GET', '/notifications'), ({ notifications }) => {

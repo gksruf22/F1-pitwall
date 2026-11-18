@@ -10,6 +10,7 @@ const NAV = [
   { key: 'analysis', href: '/consistency.html', label: '분석' },
   { key: 'fantasy', href: '/fantasy.html', label: 'Fantasy' },
   { key: 'news', href: '/news.html', label: '뉴스' },
+  { key: 'board', href: '/board.html', label: '게시판' },
 ];
 
 // 로그인 상태: 로그아웃 상태면 로그인 링크, 로그인 상태면 닉네임과 로그아웃 버튼

@@ -18,6 +18,7 @@ import auth from './routes/auth.js';
 import favorites from './routes/favorites.js';
 import fantasy from './routes/fantasy.js';
 import notifications from './routes/notifications.js';
+import posts from './routes/posts.js';
 import { scheduleNotifications } from './services/notifications.js';
 import { scheduleNews } from './services/news.js';
 
@@ -30,6 +31,7 @@ app.use('/api/auth', auth);
 app.use('/api/favorites', favorites);
 app.use('/api/fantasy', fantasy);
 app.use('/api/notifications', notifications);
+app.use('/api/posts', posts);
 app.use('/api/standings', standings);
 app.use('/api/summary', summary);
 app.use('/api', races); // /seasons, /races ...
