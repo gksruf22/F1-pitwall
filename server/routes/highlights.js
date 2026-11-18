@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { HttpError, intParam, seasonParam } from '../http.js';
 import { getHighlights } from '../services/highlights.js';
+import { withPolished } from '../services/ai-highlights.js';
 
 const router = Router();
 const KINDS = ['all', 'race', 'driver', 'team'];
@@ -12,7 +13,8 @@ router.get('/', async (req, res) => {
   const season = await seasonParam(req.query.season);
   const limit = Math.min(intParam(req.query.limit, 'limit', 12), 50);
   const all = await getHighlights(season);
-  res.json({ season, filter, items: all.filter((h) => filter === 'all' || h.kind === filter).slice(0, limit) });
+  const items = all.filter((h) => filter === 'all' || h.kind === filter).slice(0, limit);
+  res.json({ season, filter, items: await withPolished(items) });
 });
 
 export default router;

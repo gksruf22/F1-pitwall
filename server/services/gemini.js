@@ -58,11 +58,11 @@ export async function chatWithTools({ system, contents, declarations, runTool, m
 }
 
 // 도구 없이 문장만 생성(리포트·하이라이트). 근거 데이터는 prompt에 넣어 준다.
-export async function generateText({ system, prompt, maxTokens = 800 }) {
+export async function generateText({ system, prompt, maxTokens = 800, json = false }) {
   const data = await generate({
     systemInstruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.4 },
+    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.4, ...(json && { responseMimeType: 'application/json' }) },
   });
   return (data.candidates?.[0]?.content?.parts ?? []).filter((p) => p.text && !p.thought).map((p) => p.text).join('').trim();
 }

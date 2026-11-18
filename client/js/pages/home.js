@@ -134,7 +134,8 @@ function highlightsSection(season) {
     [...chips.children].forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === filter)));
     load(list, () => api('/highlights', { season, filter, limit: 8 }), ({ items }) => items.length
       ? h('ul', { class: 'feed' }, items.map((i) => h('li', null, h('span', { class: 'rnd num' }, `R${i.round}`),
-        h('a', { href: `/results.html?race=${i.raceId}&season=${season}` }, i.text))))
+        h('a', { href: `/results.html?race=${i.raceId}&season=${season}`, title: i.template ?? null }, i.text),
+        i.ai && h('span', { class: 'chip', title: `AI가 다듬은 문장 · 원문: ${i.template}` }, 'AI'))))
       : h('div', { class: 'state' }, h('p', null, '해당하는 하이라이트가 없습니다.')), skeleton(3, 44));
   };
   chips.append(...FILTERS.map(([f, label]) => h('button', { class: 'chip', 'data-f': f, 'aria-pressed': 'false', onclick: () => draw(f) }, label)));
