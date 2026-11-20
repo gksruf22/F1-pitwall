@@ -32,8 +32,10 @@ GitHub: https://github.com/gksruf22/F1-pitwall
 - **11.20 공지: 기말시험 없이 프로젝트로 평가.** 과제 조건 = 웹 서버에 콘텐츠 탑재, 클라우드 배포,
   HTML/CSS/JS, 서버는 Node.js+Express, AI 활용 가능. 현재 구성(Express·Render·바닐라 JS)이 조건에 모두 맞는다.
   완료보고서 필수 항목:
-  1. **AI 활용 내역** — AI(Claude Code)로 구현한 부분과 본인이 수행한 부분을 구분해 정확히 기술
-  2. **AI에 입력한 내용(프롬프트) 정리** — 원본은 Claude Code 세션 기록(`~/.claude/projects/…f1-pitwall/*.jsonl`, 11.13~)에서 추출
+  1. **AI 활용 내역** — AI(Claude Code)로 구현한 부분과 본인이 수행한 부분을 구분해 정확히 기술 → `docs/ai-usage.md`
+     (`[확인 필요]` 항목은 본인이 채운다)
+  2. **AI에 입력한 내용(프롬프트) 정리** — `npm run export:prompts`가 Claude Code 세션 기록(11.03~)에서 입력만 뽑아
+     `docs/ai-prompts.md`를 새로 만든다(입력 뒤에 이어진 커밋 표시). 제출 직전에 다시 실행한다
   3. 구현 과정 (주차 보고서 `docs/weekly/`·커밋 기록 활용)
   4. 구현 내용 / 동작 내용
   5. 서비스 기능·모듈 설명 (§6 API·§7 페이지·`server/services/` 기준)

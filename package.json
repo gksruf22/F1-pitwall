@@ -18,7 +18,8 @@
     "collect:news": "node server/services/news.js",
     "collect:openf1": "node scripts/collect.js",
     "collect:all": "node scripts/collect-all.js",
-    "test": "node --test"
+    "test": "node --test",
+    "export:prompts": "node scripts/export-prompts.js"
   },
   "dependencies": {
     "dotenv": "^18.0.10",
