@@ -154,7 +154,7 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 | 7 | 리플레이 | `/replay/:raceId` | 3 | Canvas 트랙맵, 재생·배속, 랩 슬라이더, 드라이버 추적, 이벤트 타임라인 |
 | 8 | 전략·분석 | `/strategy/:raceId` | 2·3 | 탭: 스틴트·전략 / 레이스 페이스(클린랩·107% 토글, 선두 대비 갭, 최속랩 Top 20) / 피트스톱 통계 / **일관성(시즌 단위)** |
 | 9 | AI 어시스턴트 | `/ai` | 4 | 채팅, 추천 질문, 근거 데이터 패널, "AI 생성 내용" 표시, 레이스 요약 리포트 |
-| 10 | 커뮤니티 | `/community` | 4 | 탭: Fantasy 랭킹/게시판/즐겨찾기/알림 + 로그인 |
+| 10 | 참여 | `/fantasy` `/board` `/favorites` `/notifications` `/login` | 4 | 별도 페이지로 둔다(**통합 `/community` 탭 페이지는 11.21 제외**: 기능은 같고 메뉴 묶음만 달라져 일정 대비 이득이 작음). Fantasy·게시판은 상단 내비, 즐겨찾기·알림은 헤더 링크 |
 | 11 | 업데이트 내역 | `/changelog` | 공통 | 푸터 링크, 정적 목록 |
 
 - **레이스 서브내비:** 결과·라이브·리플레이·전략 페이지는 같은 `raceId`를 쓰므로 공통 컴포넌트(레이스 탭 바)로
@@ -320,7 +320,7 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 - [x] **Fantasy 예측·자동 채점(11.18)** — 8-1 규칙 그대로: 1~3위 예측(서로 다른 3명, 그 시즌 엔트리만), 마감=예선 시작(없으면 결승 시작)을 **서버 시각**으로 검사, 마감 전 덮어쓰기, 채점 최대 12점. `fantasy_prediction` 테이블, `GET /api/fantasy/races`·`/races/:id/drivers`·`/me`·`/ranking`, `PUT /api/fantasy/predictions/:raceId`. 채점은 `scorePending()`이 결과가 들어온 레이스의 **미채점 예측만** 계산(여러 번 실행해도 안전)하며 별도 스케줄러 없이 `/me`·`/ranking` 호출 시 실행. 규칙 테스트 `npm test`(`server/services/fantasy.test.js`). 화면 `/fantasy.html`(예측 폼·내 예측·시즌 랭킹), 상단 내비에 Fantasy 추가. 값은 `server/config.js` 대신 서비스 파일 상수/SQL에 둠. R21(라스베이거스)은 실제 마감 전이라 실제 예측을 받을 수 있음
 - [x] **알림(11.18, 폴링)** — `notification` 테이블(`unique(user_id, kind, ref_key)`), 생성 작업 `createNotifications()`(멱등 SQL, 서버 시작 시 + 10분 간격): `FAV_RESULT`(즐겨찾기 드라이버 우승·포디움·득점·완주·리타이어 / 즐겨찾기 팀 포인트), `FAV_POLE`, `RACE_SOON`(결승 24시간 이내, 전체 사용자), `FANTASY_SCORED`. 새 즐겨찾기가 옛 알림을 쏟아내지 않도록 **최근 14일 결과만** 대상. `GET /api/notifications`(안 읽은 개수 포함)·`POST /:id/read`·`POST /read-all`(본인 것만). 헤더에 알림 링크+안 읽은 배지(30초 폴링), `/notifications.html`(클릭 읽음·모두 읽음). `RACE_SOON`은 실제 조건(24시간)을 지금 데이터로 재현할 수 없어 넓힌 간격으로 쿼리만 검증. 결과 수집(`ingest`) 직후 실행은 미구현. `POST_COMMENT`는 게시판에서 댓글 작성 시 생성
 - [x] **게시판(11.18)** — `post`·`comment` 테이블(사용자·글 삭제 시 함께 삭제, 텍스트만), `GET /api/posts?page=`(20개씩, 댓글 수)·`GET /:id`(본문+댓글)·`POST`·`PUT|DELETE /:id`·`POST /:id/comments`·`DELETE /:id/comments/:cid`. 쓰기는 JWT, 수정·삭제는 **작성자 본인만**(남의 것 403, 없으면 404), 제목 100자·본문 5000자·댓글 1000자. 댓글이 달리면 글쓴이에게 `POST_COMMENT` 알림(자기 댓글 제외, 작업 대신 댓글 작성 시 바로 생성). 통합 검색에 게시글(제목·본문) 추가. 화면 `/board.html`(목록·페이지)·`/post.html?id=`(본문·댓글·본인 수정/삭제)·`/write.html[?id=]`(쓰기·수정), 상단 내비에 게시판. 댓글 수정은 없음(삭제 후 다시 작성). 헤더 내비가 로그인 시 잘려 1600px 이하에서 내비를 한 줄 아래로 내림, `[hidden]`이 `display`에 덮이던 알림 배지(0) 수정
-- [ ] 커뮤니티 페이지
+- [x] ~~커뮤니티 페이지~~ — 11.21 제외 결정. Fantasy·게시판·즐겨찾기·알림은 이미 각각의 페이지로 동작하므로 탭으로 묶지 않는다
 
 ### 12.14~12.15 — 공통·제출
 - [ ] 업데이트 내역, 반응형·로딩/오류·엣지 케이스 점검, 서버 사전 기동·시연 리허설
@@ -347,7 +347,7 @@ type: GREEN_FLAG | SAFETY_CAR | RED_FLAG | PIT_IN | PIT_OUT | FASTEST_LAP | POSI
 
 ```
 server/  routes/ services/(ingest, assistant, highlight, jobs) db/(pool, queries, schema.sql) middleware/
-client/  dashboard/ schedule/ drivers/ news/ live/ replay/ strategy/ ai/ community/ changelog/  css/ js/(공통)
+client/  dashboard/ schedule/ drivers/ news/ live/ replay/ strategy/ ai/ changelog/  css/ js/(공통)
 scripts/ collect.js, import.js        # 사전 수집
 data/    replay/{sessionId}.json, raw/(커밋 금지), circuits.json(필요 시)
 docs/    weekly/, archive/, mockups/
