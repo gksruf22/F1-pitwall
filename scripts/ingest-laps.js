@@ -25,8 +25,9 @@ try {
     const pits = await getJolpicaAll(`${route}/pitstops`, 'PitStops', { refresh: values.refresh });
     if (!laps) { console.log(`R${round}: 랩 데이터 없음`); continue; }
 
+    // 오래된 레이스는 일부 랩에 position이 없다(예: 2010 R6) → 순위만 비워서 저장
     const L = laps.Laps.flatMap((l) => l.Timings.filter((t) => driverIds.has(t.driverId))
-      .map((t) => ({ d: t.driverId, lap: Number(l.number), ms: toMs(t.time), pos: Number(t.position) })));
+      .map((t) => ({ d: t.driverId, lap: Number(l.number), ms: toMs(t.time), pos: t.position ? Number(t.position) : null })));
     const P = (pits?.PitStops ?? []).filter((p) => driverIds.has(p.driverId))
       .map((p) => ({ d: p.driverId, lap: Number(p.lap), ms: toMs(p.duration) }));
 
